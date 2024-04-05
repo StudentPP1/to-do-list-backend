@@ -83,4 +83,14 @@ public class UserController {
         userService.doneTask(taskId, request);
     }
 
+    @PostMapping("/getDoneTasks")
+    public Map<String, List<Task>> getDoneTasks(@RequestBody(required = false) RequestDate date, HttpServletRequest request) {
+        return userService.getDoneTasks(date.getDates(), request);
+    }
+
+    @PostMapping("/replaceTaskToActive")
+    public void replaceTaskToActive(@RequestParam String taskId, HttpServletRequest request) {
+        userService.replaceTaskToActive(taskId, request);
+    }
+
 }

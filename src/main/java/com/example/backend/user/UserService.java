@@ -48,8 +48,7 @@ public class UserService {
         for (String taskId: tasksId) {
             try {
                 taskService.deleteTask(taskId);
-            } catch (Exception e) {
-                continue;
+            } catch (Exception ignored) {
             }
         }
 
@@ -93,19 +92,18 @@ public class UserService {
         tasksId.add(taskId);
 
         List<String> userTasksId = user.getTasksId();
-        for (String id: tasksId) {
-            int taskIndex = 0;
+        List<String> userDoneTasksId = user.getDoneTasksId();
 
-            for (int i = 0; i < userTasksId.size(); i++) {
-                if (Objects.equals(userTasksId.get(i), id)) {
-                    taskIndex = i;
-                }
-            }
-            userTasksId.remove(taskIndex);
-        }
+        deleteTasksFromArray(tasksId, userTasksId);
+        deleteTasksFromArray(tasksId, userDoneTasksId);
 
         user.setTasksId(userTasksId);
-        taskService.deleteTask(taskId);
+        user.setDoneTasksId(userDoneTasksId);
+        try {
+            taskService.deleteTask(taskId);
+        } catch (Exception ignored) {
+
+        }
         userRepository.save(user);
         System.out.println("New user tasks: " + user.getTasksId());
     }
@@ -207,18 +205,10 @@ public class UserService {
         tasksId.add(taskId);
 
         List<String> userTasksId = user.getTasksId();
-        for (String id: tasksId) {
-            int taskIndex = 0;
-
-            for (int i = 0; i < userTasksId.size(); i++) {
-                if (Objects.equals(userTasksId.get(i), id)) {
-                    taskIndex = i;
-                }
-            }
-            userTasksId.remove(taskIndex);
-        }
+        deleteTasksFromArray(tasksId, userTasksId);
         List<String> userDoneTasksId = user.getDoneTasksId();
-        userDoneTasksId.add(taskId);
+
+        userDoneTasksId.addAll(tasksId);
 
         user.setDoneTasksId(userDoneTasksId);
         user.setTasksId(userTasksId);
@@ -255,5 +245,62 @@ public class UserService {
             }
         }
         return tasks;
+    }
+
+    public Map<String, List<Task>> getDoneTasks(List<String> dates, HttpServletRequest request) {
+        System.out.println(dates);
+        Map<String, List<Task>> map = new HashMap<>();
+
+        User user = getUserFromRequest(request);
+        for (String date: dates) {
+            List<Task> tasks = new ArrayList<>();
+
+            for (String taskId: user.getDoneTasksId()) {
+                try {
+                    Task task = taskService.getTask(taskId);
+
+                    if (task.getParentId() == null && task.getDate().toString().equals(date)) {
+                        tasks.add(task);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            map.put(date, tasks);
+        }
+        return map;
+    }
+
+    public void replaceTaskToActive(String taskId, HttpServletRequest request) {
+        User user = getUserFromRequest(request);
+        List<String> tasksId = taskService.getSubTasksId(taskId);
+        tasksId.add(taskId);
+
+        List<String> userActiveTasksId = user.getTasksId();
+        List<String> userDoneTasksId = user.getDoneTasksId();
+
+        deleteTasksFromArray(tasksId, userDoneTasksId);
+        userActiveTasksId.addAll(tasksId);
+
+        user.setDoneTasksId(userDoneTasksId);
+        user.setTasksId(userActiveTasksId);
+
+        userRepository.save(user);
+    }
+
+    private void deleteTasksFromArray(List<String> tasksId, List<String> userDoneTasksId) {
+        for (String id: tasksId) {
+            int taskIndex = -1;
+
+            for (int i = 0; i < userDoneTasksId.size(); i++) {
+                if (Objects.equals(userDoneTasksId.get(i), id)) {
+                    taskIndex = i;
+                }
+            }
+
+            if (taskIndex != -1) {
+                userDoneTasksId.remove(taskIndex);
+            }
+        }
     }
 }
