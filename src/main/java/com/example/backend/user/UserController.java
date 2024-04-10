@@ -46,8 +46,9 @@ public class UserController {
     }
 
     @DeleteMapping("/deleteTask")
-    public void deleteTask(@RequestParam(name = "taskId") String taskId, HttpServletRequest request) {
-        userService.deleteTask(taskId, request);
+    public void deleteTask(@RequestParam(name = "taskId") String taskId, @RequestParam(name = "date") String date,
+                           HttpServletRequest request) {
+        userService.deleteTask(taskId, request, date);
     }
 
     @PostMapping("/addTag")
@@ -79,8 +80,9 @@ public class UserController {
     }
 
     @PostMapping("/doneTask")
-    public void doneTask(@RequestParam(name = "taskId") String taskId, HttpServletRequest request) {
-        userService.doneTask(taskId, request);
+    public void doneTask(@RequestParam(name = "taskId") String taskId, @RequestParam(name = "date") String date,
+                         HttpServletRequest request) {
+        userService.doneTask(taskId, request, date);
     }
 
     @PostMapping("/getDoneTasks")
@@ -89,8 +91,10 @@ public class UserController {
     }
 
     @PostMapping("/replaceTaskToActive")
-    public void replaceTaskToActive(@RequestParam String taskId, HttpServletRequest request) {
-        userService.replaceTaskToActive(taskId, request);
+    public void replaceTaskToActive(@RequestParam(name = "taskId") String taskId,
+                                    @RequestParam(name = "date") String date,
+                                    HttpServletRequest request) {
+        userService.replaceTaskToActive(taskId, date, request);
     }
 
 }

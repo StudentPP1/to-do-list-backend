@@ -84,9 +84,16 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void deleteTask(String taskId, HttpServletRequest request) {
+    public void deleteTask(String taskId, HttpServletRequest request, String date) {
         System.out.println("deleted: " + taskId);
         User user = getUserFromRequest(request);
+
+        List<String> dates = new ArrayList<>();
+        dates.add(date);
+        List<Task> tasks = getTasksByDate(request, dates).get(0);
+        if (!tasks.isEmpty()) {
+            taskService.changeOrderByTask(taskId, tasks, OrderMode.DELETE);
+        }
 
         List<String> tasksId = taskService.getSubTasksId(taskId);
         tasksId.add(taskId);
@@ -193,14 +200,32 @@ public class UserService {
                     }
                 }
             }
+            tasks.sort(Comparator.comparingInt(Task::getOrder));
             taskByDates.add(tasks);
         }
         System.out.println("getTasksByDate: " + taskByDates);
         return taskByDates;
     }
 
-    public void doneTask(String taskId, HttpServletRequest request) {
+    public void doneTask(String taskId, HttpServletRequest request, String date) {
         User user = getUserFromRequest(request);
+
+        List<Task> tasks = new ArrayList<>();
+        for (String id: user.getTasksId()) {
+            Task task = taskService.getTask(id);
+
+            if (task.getDate().toString().equals(date)) {
+                if (task.getParentId() == null) {
+                    tasks.add(task);
+                }
+            }
+        }
+        tasks.sort(Comparator.comparingInt(Task::getOrder));
+
+        if (!tasks.isEmpty()) {
+            taskService.changeOrderByTask(taskId, tasks, OrderMode.DELETE);
+        }
+
         List<String> tasksId = taskService.getSubTasksId(taskId);
         tasksId.add(taskId);
 
@@ -248,7 +273,6 @@ public class UserService {
     }
 
     public Map<String, List<Task>> getDoneTasks(List<String> dates, HttpServletRequest request) {
-        System.out.println(dates);
         Map<String, List<Task>> map = new HashMap<>();
 
         User user = getUserFromRequest(request);
@@ -268,16 +292,24 @@ public class UserService {
 
             map.put(date, tasks);
         }
+        System.out.println(map);
         return map;
     }
 
-    public void replaceTaskToActive(String taskId, HttpServletRequest request) {
+    public void replaceTaskToActive(String taskId, String date, HttpServletRequest request) {
         User user = getUserFromRequest(request);
-        List<String> tasksId = taskService.getSubTasksId(taskId);
-        tasksId.add(taskId);
+        List<String> dates = new ArrayList<>();
+        dates.add(date);
+        List<Task> tasks = getTasksByDate(request, dates).get(0);
+        if (!tasks.isEmpty()) {
+            taskService.changeOrderByTask(taskId, tasks, OrderMode.INSERT);
+        }
 
         List<String> userActiveTasksId = user.getTasksId();
         List<String> userDoneTasksId = user.getDoneTasksId();
+
+        List<String> tasksId = taskService.getSubTasksId(taskId);
+        tasksId.add(taskId);
 
         deleteTasksFromArray(tasksId, userDoneTasksId);
         userActiveTasksId.addAll(tasksId);

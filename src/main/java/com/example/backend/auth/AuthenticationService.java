@@ -18,7 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.example.backend.user.User;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Optional;
 
 @Service
@@ -72,22 +71,9 @@ public class AuthenticationService {
             return;
         }
 
-//        ArrayList<Token> validUserToken = new ArrayList<>();
-//
-//        for (Token t:userToken) {
-//            if (!t.isExpired() && !t.isRevoked()) {
-//                validUserToken.add(t);
-//            }
-//        }
-
         userToken.forEach(t -> {
-//            t.setExpired(true);
-//            t.setRevoked(true);
             tokenRepository.deleteById(t.getId());
         });
-
-//        tokenRepository.saveAll(validUserToken);
-
     }
 
     private void saveUserToken(User saveUser, String jwtToken) {

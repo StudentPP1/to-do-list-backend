@@ -1,6 +1,6 @@
 package com.example.backend.task;
 
-import com.example.backend.tag.Tag;
+import com.example.backend.user.OrderMode;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -157,5 +157,29 @@ public class TaskService {
             tasks.add(optionalTask.get());
         }
         return tasks;
+    }
+
+    public void changeOrderByTask(String taskId, List<Task> tasks, OrderMode mode) {
+        Task currentTask = getTask(taskId);
+        if (currentTask.parentId == null) {
+            if (mode == OrderMode.INSERT) {
+                System.out.println(tasks);
+                tasks.add(currentTask.getOrder() - 1, currentTask);
+                for (Task t:tasks) {
+                    t.setOrder(tasks.indexOf(t) + 1);
+                }
+                System.out.println(tasks);
+            }
+            else {
+                List<Task> tasksAfterCurrentTask = tasks.subList(tasks.indexOf(currentTask) + 1, tasks.size());
+                System.out.println(tasksAfterCurrentTask);
+                for (Task t:tasksAfterCurrentTask) {
+                    t.setOrder(t.order - 1);
+                }
+                System.out.println(tasksAfterCurrentTask);
+                tasks = tasksAfterCurrentTask;
+            }
+            taskRepository.saveAll(tasks);
+        }
     }
 }

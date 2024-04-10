@@ -10,7 +10,7 @@ import java.util.List;
 
 @Document(collection = "tasks")
 @Data
-public class Task {
+public class Task implements Comparable<Task>{
 
     @Id
     public String id;
@@ -39,5 +39,14 @@ public class Task {
         this.parentId = parentId;
         this.order = order;
         this.nestingLevel = nestingLevel;
+    }
+
+    @Override
+    public int compareTo(Task other) {
+        if(this.getOrder() > other.getOrder())
+            return 1;
+        else if (this.getOrder().equals(other.getOrder()))
+            return 0 ;
+        return -1 ;
     }
 }
