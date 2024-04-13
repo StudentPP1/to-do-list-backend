@@ -23,12 +23,68 @@ public class TaskService {
         return allSubTasksId;
     }
 
-    private void fillSubTasksList(String id, List<String> allSubIdList) throws NoSuchElementException {
+    private List<String> fillSubTasksList(String id, List<String> allSubIdList) throws NoSuchElementException {
         Task task = getTask(id);
         allSubIdList.add(id);
 
         for (String subTaskId : task.getSubTasksId()) {
             fillSubTasksList(subTaskId, allSubIdList);
+        }
+        return allSubIdList;
+    }
+
+    public List<String> getParentTasksId(String taskId, List<String> allTasks) throws NoSuchElementException {
+        List<String> allParentTasksId = new ArrayList<>();
+        Task task = getTask(taskId);
+        if (task.getParentId() != null) {
+            allParentTasksId = fillParentTasksList(task.getId(), task.getParentId(), allParentTasksId, allTasks);
+        }
+        return allParentTasksId;
+    }
+
+    private List<String> fillParentTasksList(String subTaskId,
+                                     String parentId,
+                                     List<String> allParentTasksId,
+                                     List<String> allTasks) throws NoSuchElementException {
+        Task parentTask = getTask(parentId);
+        Task subTask = getTask(subTaskId);
+
+        List<String> subTasksId = parentTask.getSubTasksId();
+        List<Task> tasks = getAllTasks(subTasksId);
+
+        System.out.println("before: " + tasks);
+        if (subTask.getOrder() - 1 <= tasks.size() - 1) {
+            tasks.add(subTask.getOrder() - 1, subTask);
+        }
+        else {
+            tasks.add(subTask);
+        }
+
+        for (Task t:tasks) {
+            t.setOrder(tasks.indexOf(t) + 1);
+        }
+
+        System.out.println("after: " + tasks);
+
+        subTasksId.add(subTaskId);
+        parentTask.setSubTasksId(subTasksId);
+        taskRepository.save(parentTask);
+        taskRepository.saveAll(tasks);
+
+        System.out.println(allTasks.contains(parentId));
+
+        if (!allTasks.contains(parentId)) {
+            allParentTasksId.add(parentId);
+
+            if (parentTask.getParentId() != null) {
+                return fillParentTasksList(parentTask.getId(), parentTask.getParentId(), allParentTasksId, allTasks);
+            }
+            else {
+                return allParentTasksId;
+            }
+        }
+        else {
+            return allParentTasksId;
         }
     }
 
@@ -95,7 +151,6 @@ public class TaskService {
     }
     public void deleteTask(String id) {
         Task task = getTask(id);
-
         // deleting all nested tasks
         taskRepository.deleteAllById(getSubTasksId(id));
 
@@ -106,6 +161,13 @@ public class TaskService {
             // removing taskId from parent
             List<String> parentSubTasksId = parentTask.getSubTasksId();
             parentSubTasksId.remove(task.getId());
+
+            List<Task> parentSubTasks = getAllTasks(parentSubTasksId);
+
+            for (Task t:parentSubTasks) {
+                t.setOrder(parentSubTasks.indexOf(t) + 1);
+            }
+            taskRepository.saveAll(parentSubTasks);
 
             if (parentSubTasksId.isEmpty() & parentTask.getNestingLevel() > 0) {
                 parentTask.setNestingLevel(parentTask.getNestingLevel() - 1);

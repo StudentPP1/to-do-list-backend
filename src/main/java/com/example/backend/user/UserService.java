@@ -229,10 +229,14 @@ public class UserService {
         List<String> tasksId = taskService.getSubTasksId(taskId);
         tasksId.add(taskId);
 
+        for (Task t: taskService.getAllTasks(tasksId)) {
+            t.setSubTasksId(new ArrayList<>());
+            taskService.saveTask(t);
+        }
+
         List<String> userTasksId = user.getTasksId();
         deleteTasksFromArray(tasksId, userTasksId);
         List<String> userDoneTasksId = user.getDoneTasksId();
-
         userDoneTasksId.addAll(tasksId);
 
         user.setDoneTasksId(userDoneTasksId);
@@ -276,6 +280,7 @@ public class UserService {
         Map<String, List<Task>> map = new HashMap<>();
 
         User user = getUserFromRequest(request);
+
         for (String date: dates) {
             List<Task> tasks = new ArrayList<>();
 
@@ -283,8 +288,10 @@ public class UserService {
                 try {
                     Task task = taskService.getTask(taskId);
 
-                    if (task.getParentId() == null && task.getDate().toString().equals(date)) {
-                        tasks.add(task);
+                    if (task.getDate().toString().equals(date)) {
+                        if (!tasks.contains(task)) {
+                            tasks.add(task);
+                        }
                     }
                 } catch (Exception ignored) {
                 }
@@ -298,25 +305,33 @@ public class UserService {
 
     public void replaceTaskToActive(String taskId, String date, HttpServletRequest request) {
         User user = getUserFromRequest(request);
-        List<String> dates = new ArrayList<>();
-        dates.add(date);
-        List<Task> tasks = getTasksByDate(request, dates).get(0);
-        if (!tasks.isEmpty()) {
-            taskService.changeOrderByTask(taskId, tasks, OrderMode.INSERT);
-        }
 
+        Task task = taskService.getTask(taskId);
         List<String> userActiveTasksId = user.getTasksId();
         List<String> userDoneTasksId = user.getDoneTasksId();
+        List<String> tasksId;
 
-        List<String> tasksId = taskService.getSubTasksId(taskId);
+        if (task.getParentId() != null) {
+            tasksId = taskService.getParentTasksId(task.getId(), userActiveTasksId);
+        } else {
+            List<String> dates = new ArrayList<>();
+            dates.add(date);
+            List<Task> tasks = getTasksByDate(request, dates).get(0);
+            if (!tasks.isEmpty()) {
+                taskService.changeOrderByTask(taskId, tasks, OrderMode.INSERT);
+            }
+            tasksId = taskService.getSubTasksId(taskId);
+        }
+
         tasksId.add(taskId);
 
-        deleteTasksFromArray(tasksId, userDoneTasksId);
+        System.out.println(taskService.getAllTasks(tasksId));
+        System.out.println("before userDoneTasksId: " + userDoneTasksId);
+        userDoneTasksId.removeAll(tasksId);
+        System.out.println("after userDoneTasksId: " + userDoneTasksId);
         userActiveTasksId.addAll(tasksId);
-
         user.setDoneTasksId(userDoneTasksId);
         user.setTasksId(userActiveTasksId);
-
         userRepository.save(user);
     }
 
