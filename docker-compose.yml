@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+  mongodb:
+    image: mongo
+    environment:
+      MONGO_INITDB_DATABASE: todo_list
+      MONGO_INITDB_ROOT_USERNAME: owner
+      MONGO_INITDB_ROOT_PASSWORD: 8aYQ9MdvCAX2FcTS
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  app:
+    build: ./
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb+srv://owner:8aYQ9MdvCAX2FcTS@cluster0.fclhicg.mongodb.net/?retryWrites=true&w=majority
+      SPRING_DATA_MONGODB_DATABASE: todo_list
+      APPLICATION_SECURITY_JWT_SECRET_KEY: 8adeb58a034b296f1984ce77d8339e249d0e1b055c5835e832c73c8ca6c874eb
+      APPLICATION_SECURITY_JWT_EXPIRATION: 86400000
+      APPLICATION_SECURITY_JWT_REFRESH_TOKEN_EXPIRATION: 604800000
+    depends_on:
+      - mongodb
+
+volumes:
+  mongodb_data:
