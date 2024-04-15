@@ -11,7 +11,7 @@
     <groupId>com.example</groupId>
     <artifactId>backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>To-do list backend</name>
+    <name>demo</name>
     <description>To-do list backend</description>
     <properties>
         <java.version>17</java.version>
