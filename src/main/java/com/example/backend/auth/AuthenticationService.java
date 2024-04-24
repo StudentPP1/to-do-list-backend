@@ -30,16 +30,15 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final TokenRepository tokenRepository;
 
-    public AuthenticationResponse register(RegisterRequest request) {
-        var user = User.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER)
-                .build();
-
+    public AuthenticationResponse register(RegisterRequest request) throws Exception {
         Optional<User> optionalUser = repository.findByEmail(request.getEmail());
 
         if (optionalUser.isEmpty()) {
+            var user = User.builder()
+                    .email(request.getEmail())
+                    .password(passwordEncoder.encode(request.getPassword()))
+                    .role(Role.USER)
+                    .build();
             var saveUser = repository.save(user);
             var jwtToken = jwtService.user(user);
             var refreshToken = jwtService.generateRefreshToken(user);
@@ -51,16 +50,7 @@ public class AuthenticationService {
                     .build();
         }
         else {
-            var oldUser = repository.findByEmail(request.getEmail())
-                    .orElseThrow();
-
-            var jwtToken = jwtService.user(oldUser);
-            // we revoke all old tokens before give user a new one
-            var refreshToken = jwtService.generateRefreshToken(user);
-            return AuthenticationResponse.builder()
-                    .accessToken(jwtToken)
-                    .refreshToken(refreshToken)
-                    .build();
+            throw new Exception("You are already authenticated");
         }
     }
 
@@ -87,34 +77,35 @@ public class AuthenticationService {
         tokenRepository.save(token);
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        var newUser = User.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER)
-                .build();
-
+    public AuthenticationResponse authenticate(AuthenticationRequest request) throws Exception {
+        System.out.println(request);
         Optional<User> optionalUser = repository.findByEmail(request.getEmail());
-        User user = optionalUser.orElseGet(() -> repository.save(newUser));
+        System.out.println(optionalUser);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            var jwtToken = jwtService.user(user);
+            // we revoke all old tokens before give user a new one
+            var refreshToken = jwtService.generateRefreshToken(user);
+            revokeAllUserTokens(user);
+            saveUserToken(user, jwtToken);
 
-        var jwtToken = jwtService.user(user);
-        // we revoke all old tokens before give user a new one
-        var refreshToken = jwtService.generateRefreshToken(user);
-        revokeAllUserTokens(user);
-        saveUserToken(user, jwtToken);
+            // check if user authenticate
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
 
-        // check if user authenticate
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+            return AuthenticationResponse.builder()
+                    .accessToken(jwtToken)
+                    .refreshToken(refreshToken)
+                    .build();
+        }
+        else {
+            throw new Exception("You aren't registered yet");
+        }
 
-        return AuthenticationResponse.builder()
-                .accessToken(jwtToken)
-                .refreshToken(refreshToken)
-                .build();
     }
 
     public AuthenticationResponse refreshToken(
