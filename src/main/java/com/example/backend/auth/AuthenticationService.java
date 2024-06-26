@@ -2,150 +2,261 @@ package com.example.backend.auth;
 
 
 import com.example.backend.config.JwtService;
+import com.example.backend.data.AuthenticationRequest;
+import com.example.backend.data.AuthenticationResponse;
+import com.example.backend.data.PasswordResetRequest;
+import com.example.backend.email.EmailService;
+import com.example.backend.email.EmailTemplateName;
 import com.example.backend.token.Token;
 import com.example.backend.token.TokenRepository;
 import com.example.backend.token.TokenType;
 import com.example.backend.user.Role;
 import com.example.backend.user.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.backend.user.UserService;
+import io.jsonwebtoken.JwtException;
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.example.backend.user.User;
-import java.io.IOException;
+import java.nio.file.attribute.UserPrincipalNotFoundException;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
 
-    private final UserRepository repository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+    private final TokenRepository tokenRepository;
+    private final UserService userService;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final TokenRepository tokenRepository;
 
-    public AuthenticationResponse register(RegisterRequest request) throws Exception {
-        Optional<User> optionalUser = repository.findByEmail(request.getEmail());
+    public String register(AuthenticationRequest request, String device) throws MessagingException {
+        System.out.println("register service: working");
 
-        if (optionalUser.isEmpty()) {
-            var user = User.builder()
-                    .email(request.getEmail())
-                    .password(passwordEncoder.encode(request.getPassword()))
-                    .role(Role.USER)
-                    .build();
-            var saveUser = repository.save(user);
-            var jwtToken = jwtService.user(user);
-            var refreshToken = jwtService.generateRefreshToken(user);
-            // save token to db
-            saveUserToken(saveUser, jwtToken);
-            return AuthenticationResponse.builder()
-                    .accessToken(jwtToken)
-                    .refreshToken(refreshToken)
-                    .build();
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new IllegalAccessError("user has already registered");
+        }
+
+        System.out.println(request);
+        var user = new User();
+        user.setEmail(request.getEmail());
+        user.setUsername(request.getUsername());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setAccountLocked(false);
+        user.setEnabled(false);
+        user.setRole(Role.USER);
+        user.setDoneTasksId(new ArrayList<>());
+        user.setTasksId(new ArrayList<>());
+        user.setTagsId(new ArrayList<>());
+
+        System.out.println(user);
+
+        userRepository.save(user);
+        return sendValidationEmail(user, device);
+    }
+
+    public AuthenticationResponse getActivationCode(String activationCode) {
+        Optional<Token> optionalToken = tokenRepository.findByToken(activationCode);
+        if (optionalToken.isPresent()) {
+            Token activationToken = optionalToken.get();
+            User user = userRepository.findById(activationToken.getUserId()).orElseThrow(() ->
+                    new UsernameNotFoundException("user not found"));
+            String device = activationToken.getDevice();
+
+            if (activationToken.getExpiredAt().after(new Date())) {
+                user.setEnabled(true);
+                userRepository.save(user);
+                jwtService.revokeAllUserTokens(user.getId());
+                var jwtToken = jwtService.generateToken(user, device);
+                var refreshToken = jwtService.generateRefreshToken(user, device);
+                tokenRepository.save(Token.builder()
+                        .token(refreshToken)
+                        .build());
+
+                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                        user,
+                        null,
+                        user.getAuthorities()
+                );
+                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+                tokenRepository.delete(activationToken);
+
+                System.out.println(user);
+                return AuthenticationResponse.builder()
+                        .accessToken(jwtToken)
+                        .refreshToken(refreshToken)
+                        .build();
+            }
+            else {
+                throw new RuntimeException("Activation code is expired");
+            }
         }
         else {
-            throw new Exception("You are already authenticated");
+            throw new RuntimeException("Invalid activation code");
         }
     }
 
-    private void revokeAllUserTokens(User user) {
-        var userToken = tokenRepository.findTokensByUserId(user.getId());
-
-        if (userToken.isEmpty()) {
-            return;
-        }
-
-        userToken.forEach(t -> {
-            tokenRepository.deleteById(t.getId());
-        });
-    }
-
-    private void saveUserToken(User saveUser, String jwtToken) {
+    private String sendValidationEmail(User user, String device) throws MessagingException {
+        String activationToken = generateActivationCode();
         var token = Token.builder()
-                .user(saveUser)
-                .token(jwtToken)
-                .tokenType(TokenType.BEARER)
-                .revoked(false)
-                .expired(false)
+                .token(activationToken)
+                .userId(user.getId())
+                .createdAt(new Date(System.currentTimeMillis()))
+                .expiredAt(new Date(System.currentTimeMillis() + 900000)) // 15 min
+                .device(device)
+                .tokenType(TokenType.ACTIVATION_ACCOUNT)
                 .build();
         tokenRepository.save(token);
+
+        emailService.sendEmail(
+                user.getEmail(),
+                user.getName(),
+                EmailTemplateName.ACTIVATE_ACCOUNT,
+                activationToken,
+                "Activation account"
+        );
+        return activationToken;
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request) throws Exception {
-        System.out.println(request);
-        Optional<User> optionalUser = repository.findByEmail(request.getEmail());
-        System.out.println(optionalUser);
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            var jwtToken = jwtService.user(user);
-            // we revoke all old tokens before give user a new one
-            var refreshToken = jwtService.generateRefreshToken(user);
-            revokeAllUserTokens(user);
-            saveUserToken(user, jwtToken);
+    private String generateActivationCode() {
+        String numbers = "0123456789";
+        StringBuilder newCode = new StringBuilder();
+        SecureRandom random = new SecureRandom();
 
-            // check if user authenticate
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getEmail(),
-                            request.getPassword()
-                    )
-            );
-
-            return AuthenticationResponse.builder()
-                    .accessToken(jwtToken)
-                    .refreshToken(refreshToken)
-                    .build();
-        }
-        else {
-            throw new Exception("You aren't registered yet");
+        for (int i = 0; i < 6; i++) {
+            newCode.append(numbers.charAt(random.nextInt(numbers.length())));
         }
 
+        return newCode.toString();
     }
 
-    public AuthenticationResponse refreshToken(
-            HttpServletRequest request,
-            HttpServletResponse response
-    ) throws IOException {
+    public AuthenticationResponse authenticate(AuthenticationRequest request, String device) {
+        System.out.println("authenticate: call");
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(() ->
+                new UsernameNotFoundException("user not found"));
+
+        jwtService.revokeAllUserTokens(user.getId());
+
+        var jwtToken = jwtService.generateToken(user, device);
+        var refreshToken = jwtService.generateRefreshToken(user, device);
+        tokenRepository.save(Token.builder()
+                .token(refreshToken)
+                .build());
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    public AuthenticationResponse refreshToken(HttpServletRequest request) {
+        System.out.println("refreshToken: call");
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         final String refreshToken;
-        final String userEmail;
+        final String email;
+        final String device;
+        final String userCurrentDevice = request.getHeader(HttpHeaders.USER_AGENT);
 
-        var authResponse = AuthenticationResponse.builder().build();
+        System.out.println(authHeader);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return authResponse;
+            throw new JwtException("token not found");
         }
 
         refreshToken = authHeader.substring(7);
-        userEmail = jwtService.extractUsername(refreshToken);
 
-        if (userEmail != null) {
-            var user = this.repository.findByEmail(userEmail)
-                    .orElseThrow();
+        if (tokenRepository.findByToken(refreshToken).isEmpty()) {
+            throw new JwtException("token not found");
+        }
+
+        email = jwtService.extractEmail(refreshToken);
+        device = jwtService.extractDevice(refreshToken);
+
+        if (email != null && device.equals(userCurrentDevice)) {
+            User user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("user not found"));
 
             if (jwtService.isTokenValid(refreshToken, user)) {
-                // generate a new access token and keep refresh token
-                var accessToken = jwtService.user(user);
-                revokeAllUserTokens(user);
-                saveUserToken(user, accessToken);
-                authResponse = AuthenticationResponse.builder()
-                        .accessToken(accessToken)
-                        .refreshToken(refreshToken)
+                jwtService.revokeAllUserTokens(user.getId());
+                String newToken = jwtService.generateToken(user, device);
+                String newRefreshToken = jwtService.generateRefreshToken(user, device);
+
+                tokenRepository.save(Token.builder()
+                        .token(newRefreshToken)
+                        .build());
+
+                return AuthenticationResponse.builder()
+                        .accessToken(newToken)
+                        .refreshToken(newRefreshToken)
                         .build();
-
-                // we want to write our authResponse in response
-                new ObjectMapper().writeValue(response.getOutputStream(),
-                        authResponse);
             }
-
         }
-        return authResponse;
+
+        return null;
+    }
+
+    public String forgotPassword(HttpServletRequest request, String email) throws MessagingException, UserPrincipalNotFoundException {
+        System.out.println("forgot password service: working");
+        String device = request.getHeader(HttpHeaders.USER_AGENT);
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserPrincipalNotFoundException("user not found"));
+        String generatedCode = generateActivationCode();
+
+        Token token = Token.builder()
+                .token(generatedCode)
+                .userId(user.getId())
+                .createdAt(new Date(System.currentTimeMillis()))
+                .expiredAt(new Date(System.currentTimeMillis() + 900000)) // 15 min
+                .device(device)
+                .tokenType(TokenType.FORGOT_PASSWORD)
+                .build();
+
+        tokenRepository.save(token);
+
+        emailService.sendEmail(
+                user.getEmail(),
+                user.getName(),
+                EmailTemplateName.FORGOT_PASSWORD,
+                generatedCode,
+                "Forgot password"
+        );
+        return generatedCode;
+    }
+
+    public void resetPassword(PasswordResetRequest passwordResetRequest, String token) {
+        Token resetPasswordToken = tokenRepository.findByToken(token).orElseThrow(() -> new JwtException("token not found"));
+        if (resetPasswordToken.getExpiredAt().after(new Date())) {
+            if (passwordResetRequest.getNewPassword().equals(passwordResetRequest.getConfirmPassword())) {
+                User user = userRepository.findById(resetPasswordToken.getUserId()).orElseThrow(
+                        () -> new UsernameNotFoundException("user not found"));
+                userService.resetPassword(user, passwordResetRequest.getNewPassword());
+                tokenRepository.delete(resetPasswordToken);
+                tokenRepository.deleteByToken(token);
+            }
+        }
+
     }
 }
 

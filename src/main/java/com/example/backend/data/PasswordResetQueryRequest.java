@@ -1,4 +1,4 @@
-package com.example.backend.auth;
+package com.example.backend.data;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -6,10 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class AuthenticationRequest {
-    private String email;
-    private String password;
+@Builder
+public class PasswordResetQueryRequest {
+    String email;
 }

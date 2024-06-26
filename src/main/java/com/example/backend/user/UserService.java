@@ -1,5 +1,6 @@
 package com.example.backend.user;
 
+import com.example.backend.config.JwtService;
 import com.example.backend.tag.Tag;
 import com.example.backend.tag.TagService;
 import com.example.backend.task.Task;
@@ -7,36 +8,45 @@ import com.example.backend.task.TaskService;
 import com.example.backend.token.Token;
 import com.example.backend.token.TokenRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.*;
 
 @Service
-public class UserService {
+@RequiredArgsConstructor
+public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final TaskService taskService;
     private final TokenRepository tokenRepository;
     private final TagService tagService;
+    private final JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository,
-                       TaskService taskService,
-                       TokenRepository tokenRepository, TagService tagService) {
-        this.userRepository = userRepository;
-        this.taskService = taskService;
-        this.tokenRepository = tokenRepository;
-        this.tagService = tagService;
+    @Override
+    public User loadUserByUsername(String email) {
+        return userRepository.findByEmail(email).orElseThrow(
+                () -> new UsernameNotFoundException("user not found")
+        );
+    }
+
+    public void resetPassword(User user, String newPassword) {
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     private User getUserFromRequest(HttpServletRequest request) {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         jwt = authHeader.substring(7);
-        Optional<Token> optionalToken = tokenRepository.findByToken(jwt);
-        optionalToken.orElseThrow(() -> new NoSuchElementException("Token not found"));
-        Token token = optionalToken.get();
-        return token.getUser();
+        String userId = jwtService.extractUser(jwt);
+        System.out.println("user id: " + userId);
+        return userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("user not found"));
     }
 
     public void deleteUser(HttpServletRequest request) {
@@ -266,6 +276,7 @@ public class UserService {
         LocalDate overdueDate = LocalDate.parse(date);
         List<Task> tasks = new ArrayList<>();
         User user = getUserFromRequest(request);
+        System.out.println(user);
 
         for (String taskId: user.getTasksId()) {
             Task task = taskService.getTask(taskId);

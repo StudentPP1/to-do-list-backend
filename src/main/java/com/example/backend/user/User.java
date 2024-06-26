@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.OneToMany;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -24,7 +25,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "users")
-public class User implements UserDetails {
+public class User implements UserDetails, Principal {
 
     @Id
     public String id;
@@ -32,11 +33,13 @@ public class User implements UserDetails {
     @Indexed(unique = true)
     private String email;
 
+    private String username;
     private String password;
-
     private List<String> TasksId = new ArrayList<>();
     private List<String> doneTasksId = new ArrayList<>();
     private List<String> tagsId = new ArrayList<>();
+    private boolean accountLocked;
+    private boolean enabled;
 
     @Enumerated(EnumType.STRING)
     private Role role;
@@ -50,7 +53,17 @@ public class User implements UserDetails {
     }
 
     @Override
+    public String getPassword() {
+        return password;
+    }
+
+    @Override
     public String getUsername() {
+        return username;
+    }
+
+    @Override
+    public String getName() {
         return email;
     }
 
@@ -61,7 +74,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return !accountLocked;
     }
 
     @Override
@@ -71,6 +84,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 }

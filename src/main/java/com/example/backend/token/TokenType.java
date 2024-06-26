@@ -1,6 +1,9 @@
 package com.example.backend.token;
 
 public enum TokenType {
-    BEARER
+    ACTIVATION_ACCOUNT,
+    FORGOT_PASSWORD,
+    REFRESH_TOKEN,
+    ACCESS_TOKEN
 }
 
