@@ -6,7 +6,7 @@ spring:
   application:
     security:
       jwt:
-        secret-key: 8adeb58a034b296f1984ce77d8339e249d0e1b055c5835e832c73c8ca6c874eb
+        secret-key: ${env.JWT_SECRET_KEY}
         expiration: 86400000
         refresh-token:
           expiration: 604800000
@@ -15,12 +15,12 @@ spring:
       client:
         registration:
           google:
-            client-id: 72227945083-6ioli3a14g9535h8qjihc7vlr0q143qm.apps.googleusercontent.com
-            client-secret: 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
+            client-id: ${env.GOOGLE_CLIENT_ID}
+            client-secret: ${env.GOOGLE_CLIENT_SECRET}
             redirectUri: "{baseUrl}/oauth2/callback/{registrationId}"
           github:
-            client-secret: d6d1437a36f0a01aa8e36a36d61bec697cd1f4b0
-            client-id: ed59386a1e2696c26afc
+            client-id: ${env.GITHUB_CLIENT_ID}
+            client-secret: ${env.GITHUB_CLIENT_SECRET}
             redirectUri: "{baseUrl}/oauth2/callback/{registrationId}"
             scope:
               - public_profile
@@ -29,7 +29,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: mishamakytonin@gmail.com
-    password: auiofemthablznyw
+    password: ${env.MAIL_PASSWORD}
     properties:
       smtp:
         auth: true
