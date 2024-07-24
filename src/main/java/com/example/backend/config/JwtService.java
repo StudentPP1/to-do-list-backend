@@ -28,6 +28,7 @@ public class JwtService {
     public long expiration;
     @Value("${spring.application.security.jwt.refresh-token.expiration}")
     public long refreshTokenExpiration;
+
     private final TokenRepository repository;
 
     public String generateToken(User user, String device) {
