@@ -125,7 +125,7 @@ public class AuthenticationService {
 
         emailService.sendEmail(
                 user.getEmail(),
-                user.getName(),
+                user.getUsername(),
                 EmailTemplateName.ACTIVATE_ACCOUNT,
                 activationToken,
                 "Activation account"
@@ -195,6 +195,8 @@ public class AuthenticationService {
 
         email = jwtService.extractEmail(refreshToken);
         device = jwtService.extractDevice(refreshToken);
+        System.out.println(email);
+        System.out.println(device);
 
         if (email != null && device.equals(userCurrentDevice)) {
             User user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("user not found"));
@@ -208,6 +210,7 @@ public class AuthenticationService {
                         .token(newRefreshToken)
                         .build());
 
+                System.out.println("Send new tokens");
                 return AuthenticationResponse.builder()
                         .accessToken(newToken)
                         .refreshToken(newRefreshToken)
@@ -237,7 +240,7 @@ public class AuthenticationService {
 
         emailService.sendEmail(
                 user.getEmail(),
-                user.getName(),
+                user.getUsername(),
                 EmailTemplateName.FORGOT_PASSWORD,
                 generatedCode,
                 "Forgot password"

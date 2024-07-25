@@ -52,6 +52,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        // http://localhost:3000
         configuration.setAllowedOrigins(List.of("https://to-do-list-frontend-wj7x.onrender.com"));
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");
@@ -69,7 +70,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .oauth2Login(auth ->
                         {
-                            auth.loginPage("https://to-do-list-frontend-wj7x.onrender.com");
+                            // http://localhost:3000/
+                            auth.loginPage("https://to-do-list-frontend-wj7x.onrender.com/");
                             auth.successHandler(oAuth2Handler);
                             auth.redirectionEndpoint(redirectionEndpoint ->
                                     redirectionEndpoint.baseUri("/oauth2/callback/*"));

@@ -29,7 +29,6 @@ public class User implements UserDetails, Principal {
 
     @Id
     public String id;
-
     @Indexed(unique = true)
     private String email;
 
