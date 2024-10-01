@@ -1,7 +1,7 @@
 package com.example.backend.auth;
 
 
-import com.example.backend.config.JwtService;
+import com.example.backend.jwt.JwtService;
 import com.example.backend.data.AuthenticationRequest;
 import com.example.backend.data.AuthenticationResponse;
 import com.example.backend.data.PasswordResetRequest;

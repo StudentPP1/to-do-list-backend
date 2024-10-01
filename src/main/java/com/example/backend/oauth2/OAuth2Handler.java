@@ -1,6 +1,6 @@
 package com.example.backend.oauth2;
 
-import com.example.backend.config.JwtService;
+import com.example.backend.jwt.JwtService;
 import com.example.backend.token.Token;
 import com.example.backend.token.TokenRepository;
 import com.example.backend.user.Role;

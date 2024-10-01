@@ -1,6 +1,7 @@
 package com.example.backend.config;
 
 
+import com.example.backend.jwt.JwtFilter;
 import com.example.backend.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.example.backend.oauth2.OAuth2Handler;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +57,6 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // http://localhost:3000/
         configuration.setAllowedOrigins(List.of(FRONTEND_URL));
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");

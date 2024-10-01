@@ -1,4 +1,4 @@
-package com.example.backend.config;
+package com.example.backend.jwt;
 
 import com.example.backend.token.TokenRepository;
 import com.example.backend.token.TokenType;

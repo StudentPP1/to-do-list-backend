@@ -1,4 +1,4 @@
-package com.example.backend.config;
+package com.example.backend.jwt;
 
 
 import com.example.backend.user.User;
@@ -26,8 +26,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-            @lombok.NonNull HttpServletRequest request,
-            @lombok.NonNull HttpServletResponse response,
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);

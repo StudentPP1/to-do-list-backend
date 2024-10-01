@@ -1,6 +1,6 @@
 package com.example.backend.user;
 
-import com.example.backend.config.JwtService;
+import com.example.backend.jwt.JwtService;
 import com.example.backend.tag.Tag;
 import com.example.backend.tag.TagService;
 import com.example.backend.task.Task;
@@ -20,7 +20,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
-
     private final UserRepository userRepository;
     private final TaskService taskService;
     private final TokenRepository tokenRepository;
