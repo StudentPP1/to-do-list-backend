@@ -1,6 +1,7 @@
 package com.example.backend.tag;
 
-import com.example.backend.task.RequestTask;
+import com.example.backend.request.RequestTags;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -8,12 +9,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/tags")
+@RequiredArgsConstructor
 public class TagController {
     private final TagService tagService;
-
-    public TagController(TagService tagService) {
-        this.tagService = tagService;
-    }
 
     @GetMapping("/get")
     public Tag getTag(@RequestParam(name = "tagId") String tagId) {
@@ -22,7 +20,6 @@ public class TagController {
 
     @PostMapping("/getAll")
     public List<Tag> getAllTags(@RequestBody(required = false) RequestTags tagsId) {
-        System.out.println(tagsId);
         return tagService.getAllTags(tagsId.getTags());
     }
 

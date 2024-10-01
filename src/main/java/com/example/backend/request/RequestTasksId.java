@@ -1,4 +1,4 @@
-package com.example.backend.task;
+package com.example.backend.request;
 
 import lombok.Data;
 

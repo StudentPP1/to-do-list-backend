@@ -1,5 +1,6 @@
 package com.example.backend.user;
 
+import com.example.backend.enums.OrderMode;
 import com.example.backend.jwt.JwtService;
 import com.example.backend.tag.Tag;
 import com.example.backend.tag.TagService;
@@ -39,16 +40,17 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    private User getUserFromRequest(HttpServletRequest request) {
+    private User getUserFromRequest(HttpServletRequest request) throws Exception {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         jwt = authHeader.substring(7);
-        String userId = jwtService.extractUser(jwt);
+        String email = jwtService.extractEmail(jwt);
+        String userId = userRepository.findByEmail(email).orElseThrow(() -> new Exception("user not found")).getId();
         System.out.println("user id: " + userId);
         return userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("user not found"));
     }
 
-    public void deleteUser(HttpServletRequest request) {
+    public void deleteUser(HttpServletRequest request) throws Exception {
         User user = getUserFromRequest(request);
 
         List<String> tasksId = user.getTasksId();
@@ -72,7 +74,7 @@ public class UserService implements UserDetailsService {
         userRepository.deleteById(user.getId());
     }
 
-    public User getUser(HttpServletRequest request) {
+    public User getUser(HttpServletRequest request) throws Exception {
         return getUserFromRequest(request);
     }
 
@@ -82,7 +84,7 @@ public class UserService implements UserDetailsService {
                         String date,
                         List<String> tags,
                         String parentId,
-                        Integer order) throws NoSuchElementException {
+                        Integer order) throws Exception {
         User user = getUserFromRequest(request);
 
         List<String> tasksId = user.getTasksId();
@@ -93,7 +95,7 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    public void deleteTask(String taskId, HttpServletRequest request, String date) {
+    public void deleteTask(String taskId, HttpServletRequest request, String date) throws Exception {
         System.out.println("deleted: " + taskId);
         User user = getUserFromRequest(request);
 
@@ -124,7 +126,7 @@ public class UserService implements UserDetailsService {
         System.out.println("New user tasks: " + user.getTasksId());
     }
 
-    public List<Task> getAllTask(HttpServletRequest request) {
+    public List<Task> getAllTask(HttpServletRequest request) throws Exception {
         List<Task> tasks = new ArrayList<>();
         User user = getUserFromRequest(request);
         List<String> tasksId = user.getTasksId();
@@ -136,7 +138,7 @@ public class UserService implements UserDetailsService {
         return tasks;
     }
 
-    public List<Tag> getAllTag(HttpServletRequest request) {
+    public List<Tag> getAllTag(HttpServletRequest request) throws Exception {
         List<Tag> tags = new ArrayList<>();
         User user = getUserFromRequest(request);
         List<String> tagsId = user.getTagsId();
@@ -148,7 +150,7 @@ public class UserService implements UserDetailsService {
         return tags;
     }
 
-    public void deleteTag(String tagId, HttpServletRequest request) {
+    public void deleteTag(String tagId, HttpServletRequest request) throws Exception {
         User user = getUserFromRequest(request);
         List<String> tagsId = user.getTagsId();
         int tagIndex = 0;
@@ -169,7 +171,7 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    public void addTag(HttpServletRequest request, String name, String color) {
+    public void addTag(HttpServletRequest request, String name, String color) throws Exception {
         User user = getUserFromRequest(request);
         String tagId = tagService.addTag(user.getId(), name, color);
         List<String> tagsId = user.getTagsId();
@@ -177,7 +179,7 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    public List<Task> getTasksByTag(String tagId, HttpServletRequest request) {
+    public List<Task> getTasksByTag(String tagId, HttpServletRequest request) throws Exception {
         List<Task> tasks = new ArrayList<>();
         User user = getUserFromRequest(request);
         for (String taskId: user.getTasksId()) {
@@ -193,7 +195,7 @@ public class UserService implements UserDetailsService {
         return tasks;
     }
 
-    public List<List<Task>> getTasksByDate(HttpServletRequest request, List<String> dates) {
+    public List<List<Task>> getTasksByDate(HttpServletRequest request, List<String> dates) throws Exception {
         List<List<Task>> taskByDates = new ArrayList<>();
 
         User user = getUserFromRequest(request);
@@ -216,7 +218,7 @@ public class UserService implements UserDetailsService {
         return taskByDates;
     }
 
-    public void doneTask(String taskId, HttpServletRequest request, String date) {
+    public void doneTask(String taskId, HttpServletRequest request, String date) throws Exception {
         User user = getUserFromRequest(request);
 
         List<Task> tasks = new ArrayList<>();
@@ -271,7 +273,7 @@ public class UserService implements UserDetailsService {
         }
     }
 
-    public List<Task> getOverdueTasks(HttpServletRequest request, String date) {
+    public List<Task> getOverdueTasks(HttpServletRequest request, String date) throws Exception {
         LocalDate overdueDate = LocalDate.parse(date);
         List<Task> tasks = new ArrayList<>();
         User user = getUserFromRequest(request);
@@ -286,7 +288,7 @@ public class UserService implements UserDetailsService {
         return tasks;
     }
 
-    public Map<String, List<Task>> getDoneTasks(List<String> dates, HttpServletRequest request) {
+    public Map<String, List<Task>> getDoneTasks(List<String> dates, HttpServletRequest request) throws Exception {
         Map<String, List<Task>> map = new HashMap<>();
 
         User user = getUserFromRequest(request);
@@ -313,7 +315,7 @@ public class UserService implements UserDetailsService {
         return map;
     }
 
-    public void replaceTaskToActive(String taskId, String date, HttpServletRequest request) {
+    public void replaceTaskToActive(String taskId, String date, HttpServletRequest request) throws Exception {
         User user = getUserFromRequest(request);
 
         Task task = taskService.getTask(taskId);

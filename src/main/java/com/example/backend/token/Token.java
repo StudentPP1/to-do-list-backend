@@ -1,6 +1,6 @@
 package com.example.backend.token;
 
-import com.example.backend.user.User;
+import com.example.backend.enums.TokenType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,7 +18,6 @@ import java.util.Date;
 public class Token {
     @Id
     private String id;
-    private String device;
     private String token;
     @Enumerated(EnumType.STRING)
     private TokenType tokenType;

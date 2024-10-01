@@ -1,5 +1,6 @@
 package com.example.backend.user;
 
+import com.example.backend.enums.Role;
 import com.example.backend.token.Token;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,7 +32,6 @@ public class User implements UserDetails, Principal {
     public String id;
     @Indexed(unique = true)
     private String email;
-
     private String username;
     private String password;
     private List<String> TasksId = new ArrayList<>();

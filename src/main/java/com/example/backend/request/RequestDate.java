@@ -1,4 +1,4 @@
-package com.example.backend.user;
+package com.example.backend.request;
 
 import lombok.Data;
 

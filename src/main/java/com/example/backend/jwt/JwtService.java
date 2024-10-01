@@ -1,7 +1,6 @@
 package com.example.backend.jwt;
 
-import com.example.backend.token.TokenRepository;
-import com.example.backend.token.TokenType;
+import com.example.backend.enums.TokenType;
 import com.example.backend.user.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -15,8 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
 @Service
@@ -29,25 +26,26 @@ public class JwtService {
     @Value("${spring.application.security.jwt.refresh-token.expiration}")
     public long refreshTokenExpiration;
 
-    private final TokenRepository repository;
-
-    public String generateToken(User user, String device) {
-        return generateToken(new HashMap<>(), user, device);
+    public String generateAccessToken(User user) {
+        return buildToken(user, expiration, TokenType.ACCESS_TOKEN);
     }
 
-    public String generateToken(Map<String, String> claims, User user, String device) {
-        return buildToken(claims, user, expiration, device, TokenType.ACCESS_TOKEN);
+    public String generateRefreshToken(User user) {
+        return buildToken(user, refreshTokenExpiration, TokenType.REFRESH_TOKEN);
     }
 
-    public String generateRefreshToken(User user, String device) {
-        return buildToken(new HashMap<>(), user, refreshTokenExpiration, device, TokenType.REFRESH_TOKEN);
+    public boolean isTokenValid(String token, User user) {
+        final String email = extractEmail(token);
+        return (email.equals(user.getEmail())) && !isTokenExpired(token);
     }
 
-    public String buildToken(
-            Map<String, String> claims,
+    public String extractEmail(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    private String buildToken(
             User user,
             long expiration,
-            String device,
             TokenType type
     ) {
         var authorities = user.getAuthorities()
@@ -57,9 +55,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .claim("authorities", authorities)
-                .claim("device", device)
                 .claim("type", type)
-                .claim("userId", user.getId())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .setIssuedAt(new Date())
                 .setSubject(user.getEmail())
@@ -67,70 +63,30 @@ public class JwtService {
                 .compact();
     }
 
-    public Key getSingInKey() {
+    private Key getSingInKey() {
         byte[] keyBytes = Decoders.BASE64URL.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public boolean isTokenExpired(String token) {
+    private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    public boolean isTokenValid(String token, User user) {
-        final String email = extractEmail(token);
-        return (email.equals(user.getEmail())) && !isTokenExpired(token);
-    }
-
-    public String extractUser(String token) {
-        Claims claims = getAllClaims(token);
-        return (String) claims.get("userId");
-    }
-
-    public String extractType(String token) {
-        Claims claims = getAllClaims(token);
-        return (String) claims.get("type");
-    }
-
-    public String extractDevice(String token) {
-        Claims claims = getAllClaims(token);
-        return (String) claims.get("device");
-    }
-
-    public String extractEmail(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
-
-    public Date extractExpiration(String token) {
+    private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = getAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    public Claims getAllClaims(String token) {
-        System.out.println(Jwts.parserBuilder()
-                .setSigningKey(getSingInKey())
-                .build()
-                .parse(token)
-        );
+    private Claims getAllClaims(String token) {
+        System.out.println();
         return Jwts.parserBuilder()
                 .setSigningKey(getSingInKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-    }
-
-    public void revokeAllUserTokens(String userId) {
-        var userToken = repository.findTokensByUserId(userId);
-
-        if (userToken.isEmpty()) {
-            return;
-        }
-
-        userToken.forEach(t -> {
-            repository.deleteById(t.getId());
-        });
     }
 }

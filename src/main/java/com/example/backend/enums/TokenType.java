@@ -1,9 +1,9 @@
-package com.example.backend.token;
+package com.example.backend.enums;
 
 public enum TokenType {
     ACTIVATION_ACCOUNT,
     FORGOT_PASSWORD,
-    REFRESH_TOKEN,
-    ACCESS_TOKEN
+    ACCESS_TOKEN,
+    REFRESH_TOKEN
 }
 

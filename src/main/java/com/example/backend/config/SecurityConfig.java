@@ -21,7 +21,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -38,8 +37,6 @@ public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
     private final JwtFilter jwtFilter;
     private final AuthenticationConfiguration authConfiguration;
-    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
-    private final LogoutHandler logoutHandler;
 
     @Value("${spring.application.frontend.url}")
     private String FRONTEND_URL;
@@ -106,9 +103,7 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .logout((out) -> out
-                        .logoutUrl("/logout") // logout endpoint
-                        .addLogoutHandler(logoutHandler)
-                        // when logout success
+                        .logoutUrl("/logout")
                         .logoutSuccessHandler(((request, response, authentication) ->
                                 SecurityContextHolder.clearContext()))
                 )

@@ -1,19 +1,17 @@
 package com.example.backend.task;
 
-import com.example.backend.user.OrderMode;
+import com.example.backend.enums.OrderMode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class TaskService {
 
     private final TaskRepository taskRepository;
-
-    public TaskService(TaskRepository taskRepository) {
-        this.taskRepository = taskRepository;
-    }
     final int MAX_NESTING_LEVEL = 5;
 
     public List<String> getSubTasksId(String taskId) throws NoSuchElementException {
@@ -23,14 +21,13 @@ public class TaskService {
         return allSubTasksId;
     }
 
-    private List<String> fillSubTasksList(String id, List<String> allSubIdList) throws NoSuchElementException {
+    private void fillSubTasksList(String id, List<String> allSubIdList) throws NoSuchElementException {
         Task task = getTask(id);
         allSubIdList.add(id);
 
         for (String subTaskId : task.getSubTasksId()) {
             fillSubTasksList(subTaskId, allSubIdList);
         }
-        return allSubIdList;
     }
 
     public List<String> getParentTasksId(String taskId, List<String> allTasks) throws NoSuchElementException {
@@ -145,6 +142,7 @@ public class TaskService {
         task.setTitle(title);
         task.setDescription(description);
         task.setDate(localDate);
+        task.setParentId(parentId);
         task.setTagsId(tags);
         task.setOrder(order);
         taskRepository.save(task);

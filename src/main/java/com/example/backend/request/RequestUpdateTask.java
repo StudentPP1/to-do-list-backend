@@ -1,11 +1,11 @@
-package com.example.backend.task;
+package com.example.backend.request;
 
 import lombok.Data;
 
 import java.util.List;
-
 @Data
-public class RequestTask {
+public class RequestUpdateTask {
+    String id;
     String title;
     String description;
     String date;
