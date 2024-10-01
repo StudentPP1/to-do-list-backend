@@ -4,6 +4,8 @@ spring:
       uri: mongodb+srv://${env.MONGO_USER}:${env.MONGO_PASSWORD}@${env.MONGO_CLUSTER}/?retryWrites=true&w=majority
       database: ${env.MONGO_DATABASE}
   application:
+    frontend:
+      url: ${env.FRONTEND_URL}
     security:
       jwt:
         secret-key: ${env.JWT_SECRET_KEY}

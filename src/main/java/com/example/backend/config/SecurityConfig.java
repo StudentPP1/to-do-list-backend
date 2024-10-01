@@ -4,6 +4,7 @@ package com.example.backend.config;
 import com.example.backend.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.example.backend.oauth2.OAuth2Handler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -39,6 +40,9 @@ public class SecurityConfig {
     private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
     private final LogoutHandler logoutHandler;
 
+    @Value("${spring.application.frontend.url}")
+    private String FRONTEND_URL;
+
     @Bean
     public HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository() {
         return new HttpCookieOAuth2AuthorizationRequestRepository();
@@ -52,8 +56,8 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // http://localhost:3000
-        configuration.setAllowedOrigins(List.of("https://to-do-list-frontend-wj7x.onrender.com"));
+        // http://localhost:3000/
+        configuration.setAllowedOrigins(List.of(FRONTEND_URL));
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");
         configuration.setAllowCredentials(true);
@@ -70,8 +74,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .oauth2Login(auth ->
                         {
-                            // http://localhost:3000/
-                            auth.loginPage("https://to-do-list-frontend-wj7x.onrender.com/");
+                            auth.loginPage(FRONTEND_URL);
                             auth.successHandler(oAuth2Handler);
                             auth.redirectionEndpoint(redirectionEndpoint ->
                                     redirectionEndpoint.baseUri("/oauth2/callback/*"));
