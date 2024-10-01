@@ -6,5 +6,5 @@ import java.util.List;
 
 @Data
 public class RequestTags {
-    List<String> tags;
+    private List<String> tags;
 }

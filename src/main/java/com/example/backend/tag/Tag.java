@@ -8,10 +8,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection = "tags")
 public class Tag {
     @Id
-    String id;
-    String name;
-    String color;
-    String userId;
+    private String id;
+    private String name;
+    private String color;
+    private String userId;
 
     public Tag(String name, String color, String userId) {
         this.name = name;

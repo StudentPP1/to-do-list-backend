@@ -6,5 +6,5 @@ import java.util.List;
 
 @Data
 public class RequestTasksId {
-    List<String> tasks;
+    private List<String> tasks;
 }

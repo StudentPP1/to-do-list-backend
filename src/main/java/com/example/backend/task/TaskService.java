@@ -221,7 +221,7 @@ public class TaskService {
 
     public void changeOrderByTask(String taskId, List<Task> tasks, OrderMode mode) {
         Task currentTask = getTask(taskId);
-        if (currentTask.parentId == null) {
+        if (currentTask.getParentId() == null) {
             if (mode == OrderMode.INSERT) {
                 System.out.println(tasks);
                 tasks.add(currentTask.getOrder() - 1, currentTask);
@@ -234,7 +234,7 @@ public class TaskService {
                 List<Task> tasksAfterCurrentTask = tasks.subList(tasks.indexOf(currentTask) + 1, tasks.size());
                 System.out.println(tasksAfterCurrentTask);
                 for (Task t:tasksAfterCurrentTask) {
-                    t.setOrder(t.order - 1);
+                    t.setOrder(t.getOrder() - 1);
                 }
                 System.out.println(tasksAfterCurrentTask);
                 tasks = tasksAfterCurrentTask;

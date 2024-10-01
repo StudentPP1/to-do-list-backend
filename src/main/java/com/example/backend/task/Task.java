@@ -13,15 +13,16 @@ import java.util.List;
 public class Task implements Comparable<Task>{
 
     @Id
-    public String id;
-    public String title;
-    public String description;
-    public LocalDate date;
-    public List<String> tagsId = new ArrayList<>();
-    public List<String> subTasksId = new ArrayList<>();
-    public String parentId = null;
-    public Integer order;
-    public Integer nestingLevel = 0;
+    private String id;
+    private String title;
+    private String description;
+    private LocalDate date;
+    private List<String> tagsId;
+    private List<String> subTasksId = new ArrayList<>();
+    private String parentId;
+    private Integer order;
+    private Integer nestingLevel;
+    private LocalDate dateDone = null;
 
     public Task(
             String title,

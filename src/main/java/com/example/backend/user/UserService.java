@@ -40,16 +40,6 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    private User getUserFromRequest(HttpServletRequest request) throws Exception {
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        jwt = authHeader.substring(7);
-        String email = jwtService.extractEmail(jwt);
-        String userId = userRepository.findByEmail(email).orElseThrow(() -> new Exception("user not found")).getId();
-        System.out.println("user id: " + userId);
-        return userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("user not found"));
-    }
-
     public void deleteUser(HttpServletRequest request) throws Exception {
         User user = getUserFromRequest(request);
 
@@ -201,17 +191,7 @@ public class UserService implements UserDetailsService {
         User user = getUserFromRequest(request);
         System.out.println("User tasks: " + user.getTasksId());
         for (String date: dates) {
-            List<Task> tasks = new ArrayList<>();
-            for (String taskId: user.getTasksId()) {
-                Task task = taskService.getTask(taskId);
-
-                if (task.getDate().toString().equals(date)) {
-                    if (task.getParentId() == null) {
-                        tasks.add(task);
-                    }
-                }
-            }
-            tasks.sort(Comparator.comparingInt(Task::getOrder));
+            List<Task> tasks = getTasksByDate(date, user);
             taskByDates.add(tasks);
         }
         System.out.println("getTasksByDate: " + taskByDates);
@@ -221,27 +201,20 @@ public class UserService implements UserDetailsService {
     public void doneTask(String taskId, HttpServletRequest request, String date) throws Exception {
         User user = getUserFromRequest(request);
 
-        List<Task> tasks = new ArrayList<>();
-        for (String id: user.getTasksId()) {
-            Task task = taskService.getTask(id);
-
-            if (task.getDate().toString().equals(date)) {
-                if (task.getParentId() == null) {
-                    tasks.add(task);
-                }
-            }
-        }
-        tasks.sort(Comparator.comparingInt(Task::getOrder));
-
+        List<Task> tasks = getTasksByDate(date, user);
         if (!tasks.isEmpty()) {
             taskService.changeOrderByTask(taskId, tasks, OrderMode.DELETE);
         }
 
+        // done task and it's sub tasks
         List<String> tasksId = taskService.getSubTasksId(taskId);
         tasksId.add(taskId);
 
         for (Task t: taskService.getAllTasks(tasksId)) {
             t.setSubTasksId(new ArrayList<>());
+            // set done date as today & save current date
+            t.setDateDone(t.getDate());
+            t.setDate(LocalDate.now());
             taskService.saveTask(t);
         }
 
@@ -255,6 +228,8 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
 
         Task task = taskService.getTask(taskId);
+
+        // update parent task (if present)
         if (task.getParentId() != null) {
             String parentId = task.getParentId();
             Task parentTask = taskService.getTask(parentId);
@@ -268,7 +243,6 @@ public class UserService implements UserDetailsService {
             }
 
             parentTask.setSubTasksId(parentSubTasksId);
-
             taskService.saveTask(parentTask);
         }
     }
@@ -337,11 +311,17 @@ public class UserService implements UserDetailsService {
 
         tasksId.add(taskId);
 
-        System.out.println(taskService.getAllTasks(tasksId));
+        for (Task t: taskService.getAllTasks(tasksId)) {
+            t.setDate(t.getDateDone());
+            t.setDateDone(null);
+            taskService.saveTask(t);
+        }
+
         System.out.println("before userDoneTasksId: " + userDoneTasksId);
         userDoneTasksId.removeAll(tasksId);
         System.out.println("after userDoneTasksId: " + userDoneTasksId);
         userActiveTasksId.addAll(tasksId);
+
         user.setDoneTasksId(userDoneTasksId);
         user.setTasksId(userActiveTasksId);
         userRepository.save(user);
@@ -361,5 +341,30 @@ public class UserService implements UserDetailsService {
                 userDoneTasksId.remove(taskIndex);
             }
         }
+    }
+
+    private User getUserFromRequest(HttpServletRequest request) throws Exception {
+        final String authHeader = request.getHeader("Authorization");
+        final String jwt;
+        jwt = authHeader.substring(7);
+        String email = jwtService.extractEmail(jwt);
+        String userId = userRepository.findByEmail(email).orElseThrow(() -> new Exception("user not found")).getId();
+        System.out.println("user id: " + userId);
+        return userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("user not found"));
+    }
+
+    private List<Task> getTasksByDate(String date, User user) {
+        List<Task> tasks = new ArrayList<>();
+        for (String id: user.getTasksId()) {
+            Task task = taskService.getTask(id);
+
+            if (task.getDate().toString().equals(date)) {
+                if (task.getParentId() == null) {
+                    tasks.add(task);
+                }
+            }
+        }
+        tasks.sort(Comparator.comparingInt(Task::getOrder));
+        return tasks;
     }
 }

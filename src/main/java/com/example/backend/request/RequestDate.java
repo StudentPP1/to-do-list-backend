@@ -6,5 +6,5 @@ import java.util.List;
 
 @Data
 public class RequestDate {
-    List<String> dates;
+    private List<String> dates;
 }

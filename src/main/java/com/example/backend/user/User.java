@@ -29,7 +29,7 @@ import java.util.List;
 public class User implements UserDetails, Principal {
 
     @Id
-    public String id;
+    private String id;
     @Indexed(unique = true)
     private String email;
     private String username;

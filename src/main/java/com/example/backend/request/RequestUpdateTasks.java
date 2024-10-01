@@ -6,5 +6,5 @@ import java.util.List;
 
 @Data
 public class RequestUpdateTasks {
-    List<RequestUpdateTask> tasks;
+    private List<RequestUpdateTask> tasks;
 }
