@@ -82,7 +82,7 @@ public class JwtService {
     }
 
     private Claims getAllClaims(String token) {
-        System.out.println();
+        System.out.println(token);
         return Jwts.parserBuilder()
                 .setSigningKey(getSingInKey())
                 .build()

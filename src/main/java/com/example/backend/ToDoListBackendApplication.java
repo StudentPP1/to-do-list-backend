@@ -5,10 +5,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.scheduling.annotation.EnableAsync;
 
-/*
- * удалить тип устройства + оформить токен експаред тут и на фронте + логаут сделать на фронте
- */
-
 @SpringBootApplication
 @EnableAsync
 public class ToDoListBackendApplication extends SpringBootServletInitializer {

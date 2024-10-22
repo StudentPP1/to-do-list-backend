@@ -83,7 +83,7 @@ public class OAuth2Handler extends SavedRequestAwareAuthenticationSuccessHandler
             response.setHeader("Access-Control-Max-Age", "3600");
             response.setHeader("Access-Control-Allow-Headers", "x-requested-with, authorization, content-type");
 
-            String targetUrl = determineTargetUrl(request, tokens.get("refreshToken"));
+            String targetUrl = determineTargetUrl(request, tokens.get("refresh_token"), tokens.get("access_token"));
             System.out.println(user);
             System.out.println("targetUrl: " + targetUrl);
 
@@ -91,13 +91,14 @@ public class OAuth2Handler extends SavedRequestAwareAuthenticationSuccessHandler
         }
     }
 
-    protected String determineTargetUrl(HttpServletRequest request, String token) throws UnexpectedException {
+    protected String determineTargetUrl(HttpServletRequest request, String refreshToken, String accessToken) throws UnexpectedException {
         Optional<String> redirectUri = CookieUtils.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME)
                 .map(Cookie::getValue);
 
         return UriComponentsBuilder.fromUriString(redirectUri.orElseThrow(() ->
                         new UnexpectedException("redirectUri is missed")))
-                .queryParam("token", token)
+                .queryParam("refresh_token", refreshToken)
+                .queryParam("access_token", accessToken)
                 .build().toUriString();
     }
 
@@ -115,8 +116,8 @@ public class OAuth2Handler extends SavedRequestAwareAuthenticationSuccessHandler
 
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
 
-        tokens.put("jwtToken", jwtToken);
-        tokens.put("refreshToken", refreshToken);
+        tokens.put("access_token", jwtToken);
+        tokens.put("refresh_token", refreshToken);
         return tokens;
     }
 }
