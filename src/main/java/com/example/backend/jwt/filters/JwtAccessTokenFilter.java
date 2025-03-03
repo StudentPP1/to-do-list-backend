@@ -9,11 +9,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AccessTokenFilter extends TokenFilter {
-    public AccessTokenFilter(JwtService jwtService, UserService userService) {
+public class JwtAccessTokenFilter extends TokenFilter {
+    public JwtAccessTokenFilter(JwtService jwtService, UserService userService) {
         super(jwtService, userService);
     }
-
     @Override
     protected String getToken(@NonNull HttpServletRequest request) throws ServletException {
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);

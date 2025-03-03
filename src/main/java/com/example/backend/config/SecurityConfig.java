@@ -1,8 +1,8 @@
 package com.example.backend.config;
 
 
-import com.example.backend.jwt.filters.AccessTokenFilter;
-import com.example.backend.jwt.filters.RefreshTokenFilter;
+import com.example.backend.jwt.filters.JwtAccessTokenFilter;
+import com.example.backend.jwt.filters.JwtRefreshTokenFilter;
 import com.example.backend.auth.oauth2.OAuth2Handler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,14 +29,14 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
     private final OAuth2Handler oAuth2Handler;
     private final AuthenticationProvider authenticationProvider;
-    private final AccessTokenFilter accessTokenFilter;
-    private final RefreshTokenFilter refreshTokenFilter;
     private final AuthenticationConfiguration authConfiguration;
+    private final JwtAccessTokenFilter accessTokenFilter;
+    private final JwtRefreshTokenFilter refreshTokenFilter;
 
     @Value("${spring.application.frontend.url}")
     private String FRONTEND_URL;
@@ -82,7 +82,7 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
-    SecurityFilterChain refreshTokenFilter(HttpSecurity http) throws Exception {
+    SecurityFilterChain endpointRefreshTokenFilter(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))

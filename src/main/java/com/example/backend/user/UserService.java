@@ -9,6 +9,7 @@ import com.example.backend.task.Task;
 import com.example.backend.task.TaskService;
 import com.example.backend.token.TokenService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -28,7 +29,6 @@ public class UserService implements UserDetailsService {
     private final TokenService tokenService;
     private final JwtService jwtService;
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
 
     @Override
     public User loadUserByUsername(String email) {
@@ -38,7 +38,7 @@ public class UserService implements UserDetailsService {
     }
 
     public void resetPassword(User user, String newPassword) {
-        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPassword(newPassword);
         userRepository.save(user);
     }
 

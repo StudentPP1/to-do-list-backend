@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 @Component
-public class RefreshTokenFilter extends TokenFilter {
-    public RefreshTokenFilter(JwtService jwtService, UserService userService) {
+public class JwtRefreshTokenFilter extends TokenFilter {
+    public JwtRefreshTokenFilter(JwtService jwtService, UserService userService) {
         super(jwtService, userService);
     }
 

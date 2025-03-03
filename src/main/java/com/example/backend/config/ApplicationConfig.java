@@ -1,6 +1,5 @@
 package com.example.backend.config;
 
-
 import com.example.backend.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -12,8 +11,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 @Configuration
 @RequiredArgsConstructor
 public class ApplicationConfig {
-
     private final UserService userService;
+
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -27,4 +26,3 @@ public class ApplicationConfig {
         return authenticationProvider;
     }
 }
-
