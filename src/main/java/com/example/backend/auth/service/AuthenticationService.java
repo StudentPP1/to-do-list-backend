@@ -25,7 +25,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.example.backend.user.User;
-import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.util.Date;
 import java.util.Optional;
 
@@ -116,7 +115,7 @@ public class AuthenticationService {
         return jwtService.validateAndSendTokens(user, refreshToken);
     }
 
-    public String forgotPassword(String email) throws UserPrincipalNotFoundException, MessagingException {
+    public String forgotPassword(String email) throws MessagingException {
         User user = userService.getUserByEmail(email);
         return emailService.sendForgotPasswordEmail(user);
     }

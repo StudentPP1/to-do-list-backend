@@ -6,5 +6,4 @@ import java.util.Optional;
 
 public interface TokenRepository extends MongoRepository<Token, String> {
     Optional<Token> findByToken(String activationCode);
-    void deleteByToken(String token);
 }

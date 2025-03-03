@@ -11,9 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
@@ -30,8 +28,8 @@ import java.util.Map;
 public class OAuth2Handler extends SavedRequestAwareAuthenticationSuccessHandler {
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final JwtService jwtService;
 
     @Value("${spring.application.frontend.url}")
     private String FRONTEND_URL;

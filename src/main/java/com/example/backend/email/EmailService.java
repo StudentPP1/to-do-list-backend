@@ -42,7 +42,7 @@ public class EmailService {
     @Value("${spring.mail.properties.smtp.starttls.enable}")
     private String starttls;
 
-    public String sendForgotPasswordEmail(User user) throws MessagingException, UserPrincipalNotFoundException {
+    public String sendForgotPasswordEmail(User user) throws MessagingException {
         System.out.println("forgot password service: working");
         String generatedCode = generateActivationCode();
 
