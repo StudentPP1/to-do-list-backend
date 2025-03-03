@@ -16,7 +16,6 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.HashMap;

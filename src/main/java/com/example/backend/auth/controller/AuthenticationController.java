@@ -46,7 +46,7 @@ public class AuthenticationController {
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public String passwordResetQuery(@RequestBody PasswordResetQueryRequest passwordResetQueryRequest)
-            throws MessagingException, UserPrincipalNotFoundException {
+            throws MessagingException {
         return service.forgotPassword(passwordResetQueryRequest.getEmail());
     }
 
