@@ -1,5 +1,9 @@
 package com.example.backend.email;
 
+import com.example.backend.enums.TokenType;
+import com.example.backend.token.Token;
+import com.example.backend.token.TokenRepository;
+import com.example.backend.user.User;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +16,9 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.attribute.UserPrincipalNotFoundException;
+import java.security.SecureRandom;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -20,6 +27,7 @@ import java.util.Properties;
 @RequiredArgsConstructor
 public class EmailService {
     private final SpringTemplateEngine springTemplateEngine;
+    private final TokenRepository tokenRepository;
 
     @Value("${spring.mail.host}")
     private String host;
@@ -34,8 +42,66 @@ public class EmailService {
     @Value("${spring.mail.properties.smtp.starttls.enable}")
     private String starttls;
 
+    public String sendForgotPasswordEmail(User user) throws MessagingException, UserPrincipalNotFoundException {
+        System.out.println("forgot password service: working");
+        String generatedCode = generateActivationCode();
+
+        Token token = Token.builder()
+                .token(generatedCode)
+                .userId(user.getId())
+                .createdAt(new Date(System.currentTimeMillis()))
+                .expiredAt(new Date(System.currentTimeMillis() + 900000)) // 15 min
+                .tokenType(TokenType.FORGOT_PASSWORD)
+                .build();
+
+        tokenRepository.save(token);
+
+        this.sendEmail(
+                user.getEmail(),
+                user.getUsername(),
+                EmailTemplateName.FORGOT_PASSWORD,
+                generatedCode,
+                "Forgot password"
+        );
+        return generatedCode;
+    }
+
+    public String sendValidationEmail(User user) throws MessagingException {
+        String activationToken = generateActivationCode();
+        var token = Token.builder()
+                .token(activationToken)
+                .userId(user.getId())
+                .createdAt(new Date(System.currentTimeMillis()))
+                .expiredAt(new Date(System.currentTimeMillis() + 900000)) // 15 min
+                .tokenType(TokenType.ACTIVATION_ACCOUNT)
+                .build();
+
+        tokenRepository.save(token);
+
+        sendEmail(
+                user.getEmail(),
+                user.getUsername(),
+                EmailTemplateName.ACTIVATE_ACCOUNT,
+                activationToken,
+                "Activation account"
+        );
+        return activationToken;
+    }
+
+    private String generateActivationCode() {
+        String numbers = "0123456789";
+        StringBuilder newCode = new StringBuilder();
+        SecureRandom random = new SecureRandom();
+
+        for (int i = 0; i < 6; i++) {
+            newCode.append(numbers.charAt(random.nextInt(numbers.length())));
+        }
+
+        return newCode.toString();
+    }
+
     @Async
-    public void sendEmail(
+    protected void sendEmail(
             String to,
             String username,
             EmailTemplateName template,

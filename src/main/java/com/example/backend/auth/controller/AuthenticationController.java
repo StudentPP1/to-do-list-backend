@@ -8,6 +8,8 @@ import com.example.backend.request.PasswordResetQueryRequest;
 import com.example.backend.request.PasswordResetRequest;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,8 +30,11 @@ public class AuthenticationController {
     }
 
     @PostMapping("/activate-account")
-    public AuthenticationResponse activateAccount(@RequestParam("token") String token) {
-        return service.getActivationCode(token);
+    public AuthenticationResponse activateAccount(
+            @NonNull HttpServletResponse response,
+            @RequestParam("token") String token
+    ) {
+        return service.getActivationCode(token, response);
     }
 
     @PostMapping("/auth")
@@ -42,7 +47,6 @@ public class AuthenticationController {
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public String passwordResetQuery(@RequestBody PasswordResetQueryRequest passwordResetQueryRequest)
             throws MessagingException, UserPrincipalNotFoundException {
-        System.out.println("password-reset-query: controller");
         return service.forgotPassword(passwordResetQueryRequest.getEmail());
     }
 
@@ -53,7 +57,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<AuthenticationResponse> refreshToken(HttpServletRequest request) {
+    public ResponseEntity<AuthenticationResponse> refreshToken(HttpServletRequest request) throws Exception {
         return ResponseEntity.ok(service.refreshToken(request));
     }
 }

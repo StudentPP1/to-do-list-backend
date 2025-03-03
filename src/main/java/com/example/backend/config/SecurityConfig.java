@@ -26,6 +26,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -58,7 +59,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(-2)
+    @Order(1)
     SecurityFilterChain oauth2FilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -80,15 +81,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(-2)
+    @Order(2)
     SecurityFilterChain refreshTokenFilter(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(req ->
-                        req
-                                .requestMatchers("/auth/**").permitAll()
-                                .anyRequest().authenticated()
+                        req.requestMatchers("/auth/refresh-token").authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
@@ -97,7 +96,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(-3)
+    @Order(3)
     SecurityFilterChain endpointsFilter(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)

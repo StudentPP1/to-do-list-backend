@@ -1,5 +1,6 @@
 package com.example.backend.auth.oauth2;
 
+import com.example.backend.auth.service.AuthenticationService;
 import com.example.backend.enums.Oauth2Connection;
 import com.example.backend.jwt.service.JwtService;
 import com.example.backend.enums.Role;
@@ -65,7 +66,7 @@ public class OAuth2Handler extends SavedRequestAwareAuthenticationSuccessHandler
                 return newUser;
             });
 
-            authenticateUser(user);
+            AuthenticationService.authenticateUser(user);
             jwtService.setTokensToCookie(user, response);
 
             getRedirectStrategy().sendRedirect(
@@ -74,14 +75,5 @@ public class OAuth2Handler extends SavedRequestAwareAuthenticationSuccessHandler
                     "%s/oauth2/redirect".formatted(FRONTEND_URL)
             );
         }
-    }
-
-    private void authenticateUser(User user) {
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                user,
-                null,
-                user.getAuthorities()
-        );
-        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
     }
 }

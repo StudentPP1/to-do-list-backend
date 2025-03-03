@@ -41,7 +41,7 @@ public class User implements UserDetails, Principal {
     private boolean enabled;
 
     @Enumerated(EnumType.STRING)
-    private Role role;
+    private Role role = Role.USER;
 
     @OneToMany(mappedBy = "user")
     private List<Token> tokens;

@@ -1,6 +1,6 @@
 package com.example.backend.jwt.service;
 
-import com.example.backend.enums.TokenType;
+import com.example.backend.response.AuthenticationResponse;
 import com.example.backend.user.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -10,8 +10,8 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
@@ -21,6 +21,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.function.Function;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class JwtService {
@@ -32,11 +33,11 @@ public class JwtService {
     public int refreshTokenExpiration;
 
     public String generateAccessToken(User user) {
-        return buildToken(user, accessTokenExpiration, TokenType.ACCESS_TOKEN);
+        return buildToken(user, accessTokenExpiration);
     }
 
     public String generateRefreshToken(User user) {
-        return buildToken(user, refreshTokenExpiration, TokenType.REFRESH_TOKEN);
+        return buildToken(user, refreshTokenExpiration);
     }
 
     public void setTokensToCookie(User user, HttpServletResponse response) {
@@ -46,17 +47,34 @@ public class JwtService {
         accessTokenCookie.setHttpOnly(true);
         accessTokenCookie.setSecure(true);
         accessTokenCookie.setMaxAge(accessTokenExpiration);
+        response.addCookie(accessTokenCookie);
+        setRefreshTokenToCookie(refreshToken, response);
+    }
+
+    public void setRefreshTokenToCookie(String refreshToken, HttpServletResponse response) {
         Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
         refreshTokenCookie.setHttpOnly(true);
-        accessTokenCookie.setSecure(true);
         refreshTokenCookie.setSecure(true);
-        accessTokenCookie.setMaxAge(refreshTokenExpiration);
-        response.addCookie(accessTokenCookie);
+        refreshTokenCookie.setMaxAge(refreshTokenExpiration);
         response.addCookie(refreshTokenCookie);
     }
 
+    public AuthenticationResponse validateAndSendTokens(User user, String token) {
+        this.isTokenValid(token);
+        String newAccessToken = this.generateAccessToken(user);
+        String newRefreshToken = this.generateRefreshToken(user);
+        log.info("refreshToken: send new tokens");
+        return AuthenticationResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .build();
+    }
+
     public boolean isTokenValid(String token) {
-        return !isTokenExpired(token);
+        if (isTokenExpired(token)) {
+            throw new RuntimeException("token expired");
+        }
+        return true;
     }
 
     public String extractEmail(String token) {
@@ -65,20 +83,13 @@ public class JwtService {
 
     private String buildToken(
             User user,
-            int expiration,
-            TokenType type
+            int expiration
     ) {
-        var authorities = user.getAuthorities()
-                .stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
         var expirationDate = LocalDateTime.now()
                 .plusMinutes(expiration)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate();
         return Jwts.builder()
-                .claim("authorities", authorities)
-                .claim("type", type)
                 .setExpiration(Date.from(Instant.from(expirationDate)))
                 .setIssuedAt(new Date())
                 .setSubject(user.getEmail())

@@ -1,5 +1,6 @@
 package com.example.backend.jwt.filters;
 
+import com.example.backend.auth.service.AuthenticationService;
 import com.example.backend.jwt.service.JwtService;
 import com.example.backend.user.User;
 import com.example.backend.user.UserService;
@@ -47,12 +48,7 @@ public abstract class TokenFilter extends OncePerRequestFilter {
             User user = userService.loadUserByUsername(email);
             if (jwtService.isTokenValid(jwt)) {
                 log.info("jwt filter: token is valid");
-                UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
-                        user,
-                        null,
-                        user.getAuthorities()
-                );
-                SecurityContextHolder.getContext().setAuthentication(token);
+                AuthenticationService.authenticateUser(user);
             }
         }
         else {
