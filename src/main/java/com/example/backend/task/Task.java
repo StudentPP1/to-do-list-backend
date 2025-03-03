@@ -6,7 +6,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 @Document(collection = "tasks")
@@ -20,11 +19,11 @@ public class Task implements Comparable<Task>{
     private String description;
     private LocalDate date;
     private List<String> tagsId;
-    private List<String> subTasksId = new ArrayList<>();
+    private List<String> subTasksId;
     private String parentId;
     private Integer order;
     private Integer nestingLevel;
-    private LocalDate dateDone = null;
+    private LocalDate dateDone;
 
     @Override
     public int compareTo(Task other) {
