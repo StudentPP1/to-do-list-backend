@@ -1,16 +1,16 @@
-package com.example.backend.auth;
+package com.example.backend.auth.service;
 
 
-import com.example.backend.jwt.JwtService;
+import com.example.backend.jwt.service.JwtService;
 import com.example.backend.request.AuthenticationRequest;
 import com.example.backend.response.AuthenticationResponse;
 import com.example.backend.request.PasswordResetRequest;
 import com.example.backend.email.EmailService;
 import com.example.backend.email.EmailTemplateName;
 import com.example.backend.token.Token;
-import com.example.backend.token.TokenRepository;
 import com.example.backend.enums.TokenType;
 import com.example.backend.enums.Role;
+import com.example.backend.token.TokenRepository;
 import com.example.backend.user.UserRepository;
 import com.example.backend.user.UserService;
 import io.jsonwebtoken.JwtException;
@@ -39,8 +39,8 @@ public class AuthenticationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final TokenRepository tokenRepository;
     private final UserService userService;
+    private final TokenRepository tokenRepository;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
@@ -176,7 +176,7 @@ public class AuthenticationService {
         if (email != null) {
             User user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("user not found"));
 
-            if (jwtService.isTokenValid(refreshToken, user)) {
+            if (jwtService.isTokenValid(refreshToken)) {
                 String newToken = jwtService.generateAccessToken(user);
                 String newRefreshToken = jwtService.generateRefreshToken(user);
 

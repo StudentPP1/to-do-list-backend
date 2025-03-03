@@ -1,4 +1,4 @@
-package com.example.backend.jwt;
+package com.example.backend.jwt.service;
 
 import com.example.backend.enums.TokenType;
 import com.example.backend.user.User;
@@ -7,12 +7,17 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -22,21 +27,36 @@ public class JwtService {
     @Value("${spring.application.security.jwt.secret-key}")
     public String secretKey;
     @Value("${spring.application.security.jwt.expiration}")
-    public long expiration;
+    public int accessTokenExpiration;
     @Value("${spring.application.security.jwt.refresh-token.expiration}")
-    public long refreshTokenExpiration;
+    public int refreshTokenExpiration;
 
     public String generateAccessToken(User user) {
-        return buildToken(user, expiration, TokenType.ACCESS_TOKEN);
+        return buildToken(user, accessTokenExpiration, TokenType.ACCESS_TOKEN);
     }
 
     public String generateRefreshToken(User user) {
         return buildToken(user, refreshTokenExpiration, TokenType.REFRESH_TOKEN);
     }
 
-    public boolean isTokenValid(String token, User user) {
-        final String email = extractEmail(token);
-        return (email.equals(user.getEmail())) && !isTokenExpired(token);
+    public void setTokensToCookie(User user, HttpServletResponse response) {
+        var accessToken = this.generateAccessToken(user);
+        var refreshToken = this.generateRefreshToken(user);
+        Cookie accessTokenCookie = new Cookie("accessToken", accessToken);
+        accessTokenCookie.setHttpOnly(true);
+        accessTokenCookie.setSecure(true);
+        accessTokenCookie.setMaxAge(accessTokenExpiration);
+        Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
+        refreshTokenCookie.setHttpOnly(true);
+        accessTokenCookie.setSecure(true);
+        refreshTokenCookie.setSecure(true);
+        accessTokenCookie.setMaxAge(refreshTokenExpiration);
+        response.addCookie(accessTokenCookie);
+        response.addCookie(refreshTokenCookie);
+    }
+
+    public boolean isTokenValid(String token) {
+        return !isTokenExpired(token);
     }
 
     public String extractEmail(String token) {
@@ -45,18 +65,21 @@ public class JwtService {
 
     private String buildToken(
             User user,
-            long expiration,
+            int expiration,
             TokenType type
     ) {
         var authorities = user.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
-
+        var expirationDate = LocalDateTime.now()
+                .plusMinutes(expiration)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
         return Jwts.builder()
                 .claim("authorities", authorities)
                 .claim("type", type)
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .setExpiration(Date.from(Instant.from(expirationDate)))
                 .setIssuedAt(new Date())
                 .setSubject(user.getEmail())
                 .signWith(getSingInKey(), SignatureAlgorithm.HS256)

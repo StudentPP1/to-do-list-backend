@@ -1,9 +1,9 @@
 package com.example.backend.config;
 
 
-import com.example.backend.jwt.JwtFilter;
-import com.example.backend.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
-import com.example.backend.oauth2.OAuth2Handler;
+import com.example.backend.jwt.filters.AccessTokenFilter;
+import com.example.backend.jwt.filters.RefreshTokenFilter;
+import com.example.backend.auth.oauth2.OAuth2Handler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -31,19 +31,14 @@ import java.util.List;
 @RequiredArgsConstructor
 @EnableMethodSecurity
 public class SecurityConfig {
-
     private final OAuth2Handler oAuth2Handler;
     private final AuthenticationProvider authenticationProvider;
-    private final JwtFilter jwtFilter;
+    private final AccessTokenFilter accessTokenFilter;
+    private final RefreshTokenFilter refreshTokenFilter;
     private final AuthenticationConfiguration authConfiguration;
 
     @Value("${spring.application.frontend.url}")
     private String FRONTEND_URL;
-
-    @Bean
-    public HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository() {
-        return new HttpCookieOAuth2AuthorizationRequestRepository();
-    }
 
     @Bean
     public AuthenticationManager authenticationManager() throws Exception {
@@ -75,9 +70,7 @@ public class SecurityConfig {
                             auth.redirectionEndpoint(redirectionEndpoint ->
                                     redirectionEndpoint.baseUri("/oauth2/callback/*"));
                             auth.authorizationEndpoint(authorizationEndpoint ->
-                                    authorizationEndpoint
-                                            .baseUri("/oauth2/authorize")
-                                            .authorizationRequestRepository(cookieAuthorizationRequestRepository())
+                                    authorizationEndpoint.baseUri("/oauth2/authorize")
                             );
                         }
                 )
@@ -87,8 +80,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(-1)
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Order(-2)
+    SecurityFilterChain refreshTokenFilter(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -99,7 +92,24 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(refreshTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
+    }
+
+    @Bean
+    @Order(-3)
+    SecurityFilterChain endpointsFilter(HttpSecurity http) throws Exception {
+        return http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(req ->
+                        req
+                                .requestMatchers("/auth/**").permitAll()
+                                .anyRequest().authenticated()
+                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider)
+                .addFilterBefore(accessTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .logout((out) -> out
                         .logoutUrl("/logout")
                         .logoutSuccessHandler(((request, response, authentication) ->

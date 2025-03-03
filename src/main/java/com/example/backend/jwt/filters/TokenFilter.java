@@ -1,6 +1,6 @@
-package com.example.backend.jwt;
+package com.example.backend.jwt.filters;
 
-
+import com.example.backend.jwt.service.JwtService;
 import com.example.backend.user.User;
 import com.example.backend.user.UserService;
 import jakarta.servlet.FilterChain;
@@ -9,17 +9,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component
+@Slf4j
 @RequiredArgsConstructor
-public class JwtFilter extends OncePerRequestFilter {
+public abstract class TokenFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserService userService;
 
@@ -28,23 +27,26 @@ public class JwtFilter extends OncePerRequestFilter {
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
+        String token = this.getToken(request);
+        this.validateToken(request, response, filterChain, token, jwtService, userService);
+    }
+    protected abstract String getToken(@NonNull HttpServletRequest request) throws ServletException;
 
-        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String jwt = authHeader.substring(7);
+    protected void validateToken(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain,
+            String jwt,
+            JwtService jwtService,
+            UserService userService
+    ) throws IOException, ServletException {
         String email = jwtService.extractEmail(jwt);
-        System.out.println("jwt filter email: " + email);
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            System.out.println("jwt filter: checked");
+            log.info("jwt filter: checked");
             User user = userService.loadUserByUsername(email);
-            if (jwtService.isTokenValid(jwt, user)) {
-                System.out.println("jwt filter: token is valid");
+            if (jwtService.isTokenValid(jwt)) {
+                log.info("jwt filter: token is valid");
                 UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
                         user,
                         null,
@@ -54,10 +56,8 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
         else {
-            System.out.println("jwt filter: do other filter");
+            log.info("jwt filter: do other filter");
         }
         filterChain.doFilter(request, response);
     }
 }
-
-

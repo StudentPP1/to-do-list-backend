@@ -1,7 +1,7 @@
 package com.example.backend.user;
 
 import com.example.backend.enums.OrderMode;
-import com.example.backend.jwt.JwtService;
+import com.example.backend.jwt.service.JwtService;
 import com.example.backend.tag.Tag;
 import com.example.backend.tag.TagService;
 import com.example.backend.task.Task;

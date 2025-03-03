@@ -1,6 +1,7 @@
-package com.example.backend.auth;
+package com.example.backend.auth.controller;
 
 
+import com.example.backend.auth.service.AuthenticationService;
 import com.example.backend.request.AuthenticationRequest;
 import com.example.backend.response.AuthenticationResponse;
 import com.example.backend.request.PasswordResetQueryRequest;
