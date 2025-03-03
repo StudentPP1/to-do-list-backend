@@ -29,6 +29,9 @@ public class TagService {
     public void deleteTag(String tagId) {
         tagRepository.deleteById(tagId);
     }
+    public void deleteTags(List<String> tagsId) {
+        tagRepository.deleteAllById(tagsId);
+    }
 
     public Tag getTag(String id) throws NoSuchElementException {
         Optional<Tag> optionalTag = tagRepository.findById(id);

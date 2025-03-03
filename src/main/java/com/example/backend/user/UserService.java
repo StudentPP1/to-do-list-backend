@@ -2,14 +2,18 @@ package com.example.backend.user;
 
 import com.example.backend.enums.OrderMode;
 import com.example.backend.jwt.service.JwtService;
+import com.example.backend.request.RequestTask;
 import com.example.backend.tag.Tag;
 import com.example.backend.tag.TagService;
 import com.example.backend.task.Task;
 import com.example.backend.task.TaskService;
 import com.example.backend.token.Token;
 import com.example.backend.token.TokenRepository;
+import com.example.backend.token.TokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,15 +21,16 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
-    private final UserRepository userRepository;
     private final TaskService taskService;
-    private final TokenRepository tokenRepository;
     private final TagService tagService;
+    private final TokenService tokenService;
     private final JwtService jwtService;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -40,59 +45,41 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    public void deleteUser(HttpServletRequest request) {
-        User user = getUserFromRequest(request);
-
-        List<String> tasksId = user.getTasksId();
-        List<String> tagsId = user.getTagsId();
-
-        for (String taskId: tasksId) {
-            try {
-                taskService.deleteTask(taskId);
-            } catch (Exception ignored) {
-            }
+    public void deleteUser() {
+        User user = getUser();
+        try {
+            taskService.deleteTasks(user.getTasksId());
+        } catch (Exception ignored) {
         }
-
-        for (String tagId: tagsId) {
-            tagService.deleteTag(tagId);
-        }
-
-        for (Token t: user.getTokens()) {
-            tokenRepository.deleteById(t.getId());
-        }
-
+        tagService.deleteTags(user.getTagsId());
+        tokenService.deleteTokens(user.getTokens());
         userRepository.deleteById(user.getId());
     }
 
-    public void addTask(HttpServletRequest request,
-                        String title,
-                        String description,
-                        String date,
-                        List<String> tags,
-                        String parentId,
-                        Integer order
-    )  {
-        User user = getUserFromRequest(request);
-
+    public void addTask(RequestTask task)  {
+        User user = getUser();
         List<String> tasksId = user.getTasksId();
-        String taskId = taskService.addTask(title, description, date, tags, parentId, order);
+        String taskId = taskService.addTask(
+                task.getTitle(),
+                task.getDescription(),
+                task.getDate(),
+                task.getTags(),
+                task.getParentId(),
+                task.getOrder());
         tasksId.add(taskId);
         user.setTasksId(tasksId);
-        System.out.println("addTask: " + user.getTasksId());
         userRepository.save(user);
     }
 
-    public void deleteTask(String taskId, HttpServletRequest request, String date) throws Exception {
-        System.out.println("deleted: " + taskId);
-        User user = getUserFromRequest(request);
+    public void deleteTask(String taskId, String date) {
+        User user = getUser();
 
         List<String> dates = new ArrayList<>();
         dates.add(date);
-        List<Task> tasks = getTasksByDate(request, dates).get(0);
+        List<Task> tasks = getTasksByDate(dates).get(0);
         if (!tasks.isEmpty()) {
             taskService.changeOrderByTask(taskId, tasks, OrderMode.DELETE);
         }
-
         List<String> tasksId = taskService.getSubTasksId(taskId);
         tasksId.add(taskId);
 
@@ -110,35 +97,18 @@ public class UserService implements UserDetailsService {
 
         }
         userRepository.save(user);
-        System.out.println("New user tasks: " + user.getTasksId());
     }
 
-    public List<Task> getAllTask(HttpServletRequest request) {
-        List<Task> tasks = new ArrayList<>();
-        User user = getUserFromRequest(request);
-        List<String> tasksId = user.getTasksId();
-
-        for (String taskId: tasksId) {
-            tasks.add(taskService.getTask(taskId));
-        }
-
-        return tasks;
+    public List<Task> getAllTask() {
+        return getUser().getTasksId().stream().map(taskService::getTask).toList();
     }
 
-    public List<Tag> getAllTag(HttpServletRequest request) {
-        List<Tag> tags = new ArrayList<>();
-        User user = getUserFromRequest(request);
-        List<String> tagsId = user.getTagsId();
-
-        for (String tagId: tagsId) {
-            tags.add(tagService.getTag(tagId));
-        }
-
-        return tags;
+    public List<Tag> getAllTag() {
+        return getUser().getTagsId().stream().map(tagService::getTag).toList();
     }
 
-    public void deleteTag(String tagId, HttpServletRequest request) {
-        User user = getUserFromRequest(request);
+    public void deleteTag(String tagId) {
+        User user = getUser();
         List<String> tagsId = user.getTagsId();
         int tagIndex = 0;
 
@@ -150,53 +120,38 @@ public class UserService implements UserDetailsService {
         tagsId.remove(tagIndex);
         user.setTagsId(tagsId);
 
-        for (String taskId: user.getTasksId()) {
-            taskService.deleteTag(taskId, tagId);
-        }
+        user.getTasksId().forEach(taskId -> taskService.deleteTag(taskId, tagId));
 
         tagService.deleteTag(tagId);
         userRepository.save(user);
     }
 
-    public void addTag(HttpServletRequest request, String name, String color)  {
-        User user = getUserFromRequest(request);
+    public void addTag(String name, String color)  {
+        User user = getUser();
         String tagId = tagService.addTag(user.getId(), name, color);
         List<String> tagsId = user.getTagsId();
         tagsId.add(tagId);
         userRepository.save(user);
     }
 
-    public List<Task> getTasksByTag(String tagId, HttpServletRequest request) {
-        List<Task> tasks = new ArrayList<>();
-        User user = getUserFromRequest(request);
-        for (String taskId: user.getTasksId()) {
-
-            Task task = taskService.getTask(taskId);
-            for (String taskTagId: task.getTagsId()) {
-                if (Objects.equals(taskTagId, tagId)) {
-                    tasks.add(task);
-                }
-            }
-        }
-
-        return tasks;
+    public List<Task> getTasksByTag(String tagId) {
+        return getUser().getTasksId().stream()
+                .map(taskService::getTask)
+                .filter(task -> task.getTagsId().contains(tagId))
+                .toList();
     }
 
-    public List<List<Task>> getTasksByDate(HttpServletRequest request, List<String> dates) {
+    public List<List<Task>> getTasksByDate(List<String> dates) {
         List<List<Task>> taskByDates = new ArrayList<>();
-
-        User user = getUserFromRequest(request);
-        System.out.println("User tasks: " + user.getTasksId());
         for (String date: dates) {
-            List<Task> tasks = getTasksByDate(date, user);
+            List<Task> tasks = getTasksByDate(date, getUser());
             taskByDates.add(tasks);
         }
-        System.out.println("getTasksByDate: " + taskByDates);
         return taskByDates;
     }
 
-    public void doneTask(String taskId, HttpServletRequest request, String date) {
-        User user = getUserFromRequest(request);
+    public void doneTask(String taskId, String date) {
+        User user = getUser();
 
         List<Task> tasks = getTasksByDate(date, user);
         if (!tasks.isEmpty()) {
@@ -244,50 +199,23 @@ public class UserService implements UserDetailsService {
         }
     }
 
-    public List<Task> getOverdueTasks(HttpServletRequest request, String date) {
+    public List<Task> getOverdueTasks(String date) {
         LocalDate overdueDate = LocalDate.parse(date);
-        List<Task> tasks = new ArrayList<>();
-        User user = getUserFromRequest(request);
-        System.out.println(user);
-
-        for (String taskId: user.getTasksId()) {
-            Task task = taskService.getTask(taskId);
-            if (task.getDate().isBefore(overdueDate) && task.getParentId() == null) {
-                tasks.add(task);
-            }
-        }
-        return tasks;
+        return getUser().getTasksId().stream()
+                .map(taskService::getTask)
+                .filter(task -> task.getDate().isBefore(overdueDate) && task.getParentId() == null)
+                .toList();
     }
 
-    public Map<String, List<Task>> getDoneTasks(List<String> dates, HttpServletRequest request) {
-        Map<String, List<Task>> map = new HashMap<>();
-
-        User user = getUserFromRequest(request);
-
-        for (String date: dates) {
-            List<Task> tasks = new ArrayList<>();
-
-            for (String taskId: user.getDoneTasksId()) {
-                try {
-                    Task task = taskService.getTask(taskId);
-
-                    if (task.getDate().toString().equals(date)) {
-                        if (!tasks.contains(task)) {
-                            tasks.add(task);
-                        }
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-
-            map.put(date, tasks);
-        }
-        System.out.println(map);
-        return map;
+    public Map<String, List<Task>> getDoneTasks(List<String> dates) {
+        return getUser().getDoneTasksId().stream()
+                .map(taskService::getTask)
+                .filter(task -> dates.contains(task.getDate().toString()))
+                .collect(Collectors.groupingBy(task -> task.getDate().toString(), Collectors.toList()));
     }
 
-    public void replaceTaskToActive(String taskId, String date, HttpServletRequest request) {
-        User user = getUserFromRequest(request);
+    public void replaceTaskToActive(String taskId, String date) {
+        User user = getUser();
 
         Task task = taskService.getTask(taskId);
         List<String> userActiveTasksId = user.getTasksId();
@@ -299,7 +227,7 @@ public class UserService implements UserDetailsService {
         } else {
             List<String> dates = new ArrayList<>();
             dates.add(date);
-            List<Task> tasks = getTasksByDate(request, dates).get(0);
+            List<Task> tasks = getTasksByDate(dates).get(0);
             if (!tasks.isEmpty()) {
                 taskService.changeOrderByTask(taskId, tasks, OrderMode.INSERT);
             }
@@ -314,9 +242,7 @@ public class UserService implements UserDetailsService {
             taskService.saveTask(t);
         }
 
-        System.out.println("before userDoneTasksId: " + userDoneTasksId);
         userDoneTasksId.removeAll(tasksId);
-        System.out.println("after userDoneTasksId: " + userDoneTasksId);
         userActiveTasksId.addAll(tasksId);
 
         user.setDoneTasksId(userDoneTasksId);
@@ -354,11 +280,15 @@ public class UserService implements UserDetailsService {
         return tasks;
     }
 
-    public User getUserFromRequest(HttpServletRequest request) {
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt = authHeader.substring(7);
-        String email = jwtService.extractEmail(jwt);
-        return getUserByEmail(email);
+    public User getUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails user) {
+            String email = jwtService.extractEmail(user.getUsername());
+            return getUserByEmail(email);
+        }
+        else {
+            throw new UsernameNotFoundException("user not found");
+        }
     }
 
     public User getUserByEmail(String email) {

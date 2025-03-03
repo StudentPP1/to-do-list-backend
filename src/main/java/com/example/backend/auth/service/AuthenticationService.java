@@ -112,7 +112,7 @@ public class AuthenticationService {
         String refreshToken = String.valueOf(refreshTokenCookie.orElseThrow(
                 () -> new ServletException("refreshToken isn't present")
         ));
-        User user = userService.getUserFromRequest(request);
+        User user = userService.getUser();
         return jwtService.validateAndSendTokens(user, refreshToken);
     }
 

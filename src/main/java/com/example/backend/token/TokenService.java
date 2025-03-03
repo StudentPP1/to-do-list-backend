@@ -1,10 +1,10 @@
 package com.example.backend.token;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-@Slf4j
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class TokenService {
@@ -17,5 +17,9 @@ public class TokenService {
 
     public void deleteToken(Token token) {
         tokenRepository.delete(token);
+    }
+
+    public void deleteTokens(List<Token> tokens) {
+        tokenRepository.deleteAll(tokens);
     }
 }

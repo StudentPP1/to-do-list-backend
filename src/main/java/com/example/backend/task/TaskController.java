@@ -37,7 +37,6 @@ public class TaskController {
     @PostMapping("/updateSome")
     public void updateSomeTask(@RequestBody RequestUpdateTasks requestUpdateTasks) {
         for (RequestUpdateTask task: requestUpdateTasks.getTasks()) {
-            System.out.println(task);
             taskService.updateTask(
                     task.getId(),
                     task.getTitle(),
