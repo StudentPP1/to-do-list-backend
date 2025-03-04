@@ -46,6 +46,7 @@ public class OAuth2Handler extends SavedRequestAwareAuthenticationSuccessHandler
         if (connectedAccount.isPresent()) {
             User user = userService.getUserById(connectedAccount.get().getUserId());
             registerUserAndRedirect(user, request, response);
+            return;
         }
         // find user by email & add connect user or create a new user
         try {
