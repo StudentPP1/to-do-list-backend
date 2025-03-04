@@ -7,6 +7,7 @@ import com.example.backend.user.User;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
@@ -41,52 +43,19 @@ public class EmailService {
     @Value("${spring.mail.properties.smtp.starttls.enable}")
     private String starttls;
 
-    public String sendForgotPasswordEmail(User user) throws MessagingException {
-        System.out.println("forgot password service: working");
-        String generatedCode = generateActivationCode();
-
-        Token token = Token.builder()
-                .token(generatedCode)
-                .userId(user.getId())
-                .createdAt(new Date(System.currentTimeMillis()))
-                .expiredAt(new Date(System.currentTimeMillis() + 900000)) // 15 min
-                .tokenType(TokenType.FORGOT_PASSWORD)
-                .build();
-
-        tokenRepository.save(token);
-
-        this.sendEmail(
-                user.getEmail(),
-                user.getUsername(),
-                EmailTemplateName.FORGOT_PASSWORD,
-                generatedCode,
-                "Forgot password"
-        );
-        return generatedCode;
-    }
-
-    public String sendValidationEmail(User user) throws MessagingException {
+    public String sendEmail(User user, TokenType type) throws MessagingException {
         String activationToken = generateActivationCode();
-        var token = Token.builder()
-                .token(activationToken)
-                .userId(user.getId())
-                .createdAt(new Date(System.currentTimeMillis()))
-                .expiredAt(new Date(System.currentTimeMillis() + 900000)) // 15 min
-                .tokenType(TokenType.ACTIVATION_ACCOUNT)
-                .build();
-
+        var token = buildToken(activationToken, user, type);
         tokenRepository.save(token);
-
-        sendEmail(
+        sendEmailToUser(
                 user.getEmail(),
                 user.getUsername(),
-                EmailTemplateName.ACTIVATE_ACCOUNT,
+                type.getName(),
                 activationToken,
-                "Activation account"
+                type.getName()
         );
         return activationToken;
     }
-
     private String generateActivationCode() {
         String numbers = "0123456789";
         StringBuilder newCode = new StringBuilder();
@@ -98,12 +67,20 @@ public class EmailService {
 
         return newCode.toString();
     }
-
+    private Token buildToken(String tokenContent, User user, TokenType type) {
+        return Token.builder()
+                .token(tokenContent)
+                .userId(user.getId())
+                .createdAt(new Date(System.currentTimeMillis()))
+                .expiredAt(new Date(System.currentTimeMillis() + 900000)) // 15 min
+                .tokenType(type)
+                .build();
+    }
     @Async
-    protected void sendEmail(
+    protected void sendEmailToUser(
             String to,
             String username,
-            EmailTemplateName template,
+            String templateName,
             String activationCode,
             String subject
     ) throws MessagingException {
@@ -120,8 +97,6 @@ public class EmailService {
         props.put("mail.smtp.auth", auth);
         props.put("mail.smtp.starttls.enable", starttls);
         props.put("mail.debug", "true");
-
-        String templateName = template.getName();
 
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(

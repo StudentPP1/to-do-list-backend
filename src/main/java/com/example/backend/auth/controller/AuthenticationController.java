@@ -31,7 +31,7 @@ public class AuthenticationController {
     public AuthenticationResponse activateAccount(
             @NonNull HttpServletResponse response,
             @RequestParam("token") String token
-    ) {
+    ) throws Exception {
         return service.getActivationCode(token, response);
     }
 

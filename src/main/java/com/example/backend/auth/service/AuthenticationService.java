@@ -1,6 +1,7 @@
 package com.example.backend.auth.service;
 
 
+import com.example.backend.enums.TokenType;
 import com.example.backend.jwt.service.JwtService;
 import com.example.backend.request.AuthenticationRequest;
 import com.example.backend.response.AuthenticationResponse;
@@ -57,35 +58,31 @@ public class AuthenticationService {
                     .enabled(false)
                     .build();
             userService.saveUser(user);
-            return emailService.sendValidationEmail(user);
+            return emailService.sendEmail(user, TokenType.ACTIVATE_ACCOUNT);
         }
     }
 
-    public AuthenticationResponse getActivationCode(String activationCode, HttpServletResponse response) {
+    public AuthenticationResponse getActivationCode(String activationCode, HttpServletResponse response) throws Exception {
         log.info("activation service is working");
-        Token activationToken = tokenService.findByToken(activationCode);
+        Token activationToken = validateAndGetToken(activationCode);
         User user = userService.getUserById(activationToken.getUserId());
+        tokenService.deleteToken(activationToken);
 
-        if (activationToken.getExpiredAt().after(new Date())) {
-            tokenService.deleteToken(activationToken);
-            user.setEnabled(true);
-            userService.saveUser(user);
-            registerUser(user);
+        user.setEnabled(true);
+        userService.saveUser(user);
+        registerUser(user);
 
-            var jwtToken = jwtService.generateAccessToken(user);
-            jwtService.setRefreshTokenToCookie(user, response);
-            return AuthenticationResponse.builder()
-                    .accessToken(jwtToken)
-                    .build();
-        }
-        else {
-            throw new RuntimeException("Activation code is expired");
-        }
+        var jwtToken = jwtService.generateAccessToken(user);
+        jwtService.setRefreshTokenToCookie(user, response);
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .build();
     }
 
     public AuthenticationResponse authenticate(
             @NonNull HttpServletResponse response,
-            AuthenticationRequest request) {
+            AuthenticationRequest request
+    ) {
         log.info("authenticate: call");
         User user = userService.getUserByEmail(request.getEmail());
         Authentication authentication = authenticationManager.authenticate(
@@ -113,18 +110,14 @@ public class AuthenticationService {
 
     public String forgotPassword(String email) throws MessagingException {
         User user = userService.getUserByEmail(email);
-        return emailService.sendForgotPasswordEmail(user);
+        return emailService.sendEmail(user, TokenType.FORGOT_PASSWORD);
     }
 
     public void resetPassword(PasswordResetRequest passwordResetRequest, String token) throws Exception {
-        Token resetPasswordToken = tokenService.findByToken(token);
-        if (resetPasswordToken.getExpiredAt().after(new Date())) {
-            if (passwordResetRequest.getNewPassword().equals(passwordResetRequest.getConfirmPassword())) {
-                User user = userService.getUserById(resetPasswordToken.getUserId());
-                userService.resetPassword(user, passwordResetRequest.getNewPassword());
-            }
-        } else {
-            throw new Exception("token is expired");
+        Token resetPasswordToken = validateAndGetToken(token);
+        if (passwordResetRequest.getNewPassword().equals(passwordResetRequest.getConfirmPassword())) {
+            User user = userService.getUserById(resetPasswordToken.getUserId());
+            userService.resetPassword(user, passwordResetRequest.getNewPassword());
         }
         tokenService.deleteToken(resetPasswordToken);
     }
@@ -139,5 +132,13 @@ public class AuthenticationService {
         SecurityContextHolderStrategy securityContextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
         context.setAuthentication(authenticationToken);
         securityContextHolderStrategy.setContext(context);
+    }
+
+    private Token validateAndGetToken(String tokenContent) throws Exception {
+        Token token = tokenService.findByToken(tokenContent);
+        if (!token.getExpiredAt().after(new Date())) {
+            throw new Exception("token is expired");
+        }
+        return token;
     }
 }

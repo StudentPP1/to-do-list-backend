@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 @Slf4j
 @Component
@@ -48,14 +49,17 @@ public class OAuth2Handler extends SavedRequestAwareAuthenticationSuccessHandler
             DefaultOAuth2User principal = (DefaultOAuth2User) authentication.getPrincipal();
             Map<String, Object> attributes = principal.getAttributes();
             String password = "";
-            String email = (String) attributes.getOrDefault("email", "");
+            Object email = attributes.get("email");
+            if (email == null) {
+                throw new NoSuchElementException("email not found");
+            }
             String name = (String) attributes.getOrDefault("name", "");
 
-            User user = repository.findByEmail(email).orElseGet(() -> {
+            User user = repository.findByEmail((String) email).orElseGet(() -> {
                 log.info("OAuth2: user not found");
                 User newUser = new User();
                 newUser.setUsername(name);
-                newUser.setEmail(email);
+                newUser.setEmail((String) email);
                 newUser.setPassword(passwordEncoder.encode(password));
                 newUser.setEnabled(true);
                 newUser.setAccountLocked(false);
