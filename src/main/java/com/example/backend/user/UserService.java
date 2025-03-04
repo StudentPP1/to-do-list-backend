@@ -79,8 +79,8 @@ public class UserService implements UserDetailsService {
         List<String> userTasksId = user.getTasksId();
         List<String> userDoneTasksId = user.getDoneTasksId();
 
-        deleteTasksFromArray(tasksId, userTasksId);
-        deleteTasksFromArray(tasksId, userDoneTasksId);
+        userTasksId = deleteTasksFromArray(tasksId, userTasksId);
+        userDoneTasksId = deleteTasksFromArray(tasksId, userDoneTasksId);
 
         user.setTasksId(userTasksId);
         user.setDoneTasksId(userDoneTasksId);
@@ -102,19 +102,9 @@ public class UserService implements UserDetailsService {
 
     public void deleteTag(String tagId) {
         User user = getUser();
-        List<String> tagsId = user.getTagsId();
-        int tagIndex = 0;
-
-        for (int i = 0; i < tagsId.size(); i++) {
-            if (Objects.equals(tagsId.get(i), tagId)) {
-                tagIndex = i;
-            }
-        }
-        tagsId.remove(tagIndex);
+        List<String> tagsId = user.getTagsId().stream().filter(id -> !id.equals(tagId)).toList();
         user.setTagsId(tagsId);
-
         user.getTasksId().forEach(taskId -> taskService.deleteTag(taskId, tagId));
-
         tagService.deleteTag(tagId);
         userRepository.save(user);
     }
@@ -124,6 +114,7 @@ public class UserService implements UserDetailsService {
         String tagId = tagService.addTag(user.getId(), name, color);
         List<String> tagsId = user.getTagsId();
         tagsId.add(tagId);
+        user.setTagsId(tagsId);
         userRepository.save(user);
     }
 
@@ -135,12 +126,7 @@ public class UserService implements UserDetailsService {
     }
 
     public List<List<Task>> getTasksByDate(List<String> dates) {
-        List<List<Task>> taskByDates = new ArrayList<>();
-        for (String date: dates) {
-            List<Task> tasks = getTasksByDate(date, getUser());
-            taskByDates.add(tasks);
-        }
-        return taskByDates;
+        return dates.stream().map(date -> getTasksByDate(date, getUser())).toList();
     }
 
     public void doneTask(String taskId, String date) {
@@ -243,34 +229,16 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    private void deleteTasksFromArray(List<String> tasksId, List<String> userDoneTasksId) {
-        for (String id: tasksId) {
-            int taskIndex = -1;
-
-            for (int i = 0; i < userDoneTasksId.size(); i++) {
-                if (Objects.equals(userDoneTasksId.get(i), id)) {
-                    taskIndex = i;
-                }
-            }
-
-            if (taskIndex != -1) {
-                userDoneTasksId.remove(taskIndex);
-            }
-        }
+    private List<String> deleteTasksFromArray(List<String> tasksId, List<String> userDoneTasksId) {
+        return userDoneTasksId.stream().filter(task -> !tasksId.contains(task)).toList();
     }
-    private List<Task> getTasksByDate(String date, User user) {
-        List<Task> tasks = new ArrayList<>();
-        for (String id: user.getTasksId()) {
-            Task task = taskService.getTask(id);
 
-            if (task.getDate().toString().equals(date)) {
-                if (task.getParentId() == null) {
-                    tasks.add(task);
-                }
-            }
-        }
-        tasks.sort(Comparator.comparingInt(Task::getOrder));
-        return tasks;
+    private List<Task> getTasksByDate(String date, User user) {
+        return user.getTasksId().stream()
+                .map(taskService::getTask)
+                .filter(task -> task.getDate().toString().equals(date) && task.getParentId() == null)
+                .sorted(Comparator.comparingInt(Task::getOrder))
+                .collect(Collectors.toList());
     }
 
     public User getUser() {
