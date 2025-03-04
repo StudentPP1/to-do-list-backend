@@ -14,10 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.AccessDeniedException;
 import java.security.Key;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -36,43 +34,34 @@ public class JwtService {
         return buildToken(user, accessTokenExpiration);
     }
 
-    public String generateRefreshToken(User user) {
+    private String generateRefreshToken(User user) {
         return buildToken(user, refreshTokenExpiration);
     }
 
-    public void setTokensToCookie(User user, HttpServletResponse response) {
-        var accessToken = this.generateAccessToken(user);
+    public void setRefreshTokenToCookie(User user, HttpServletResponse response) {
         var refreshToken = this.generateRefreshToken(user);
-        Cookie accessTokenCookie = new Cookie("accessToken", accessToken);
-        accessTokenCookie.setHttpOnly(true);
-        accessTokenCookie.setSecure(true);
-        accessTokenCookie.setMaxAge(accessTokenExpiration);
-        response.addCookie(accessTokenCookie);
-        setRefreshTokenToCookie(refreshToken, response);
-    }
-
-    public void setRefreshTokenToCookie(String refreshToken, HttpServletResponse response) {
         Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
         refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(true);
+        refreshTokenCookie.setSecure(false);
+        refreshTokenCookie.setPath("/");
         refreshTokenCookie.setMaxAge(refreshTokenExpiration);
+        refreshTokenCookie.setAttribute("SameSite", "Strict");
         response.addCookie(refreshTokenCookie);
     }
 
-    public AuthenticationResponse validateAndSendTokens(User user, String token) {
+    public AuthenticationResponse validateAndSendTokens(User user, String token, HttpServletResponse response) throws AccessDeniedException {
         this.isTokenValid(token);
         String newAccessToken = this.generateAccessToken(user);
-        String newRefreshToken = this.generateRefreshToken(user);
+        this.setRefreshTokenToCookie(user, response);
         log.info("refreshToken: send new tokens");
         return AuthenticationResponse.builder()
                 .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
                 .build();
     }
 
-    public boolean isTokenValid(String token) {
+    public boolean isTokenValid(String token) throws AccessDeniedException {
         if (isTokenExpired(token)) {
-            throw new RuntimeException("token expired");
+            throw new AccessDeniedException("token expired");
         }
         return true;
     }
@@ -83,14 +72,10 @@ public class JwtService {
 
     private String buildToken(
             User user,
-            int expiration
+            long expiration
     ) {
-        var expirationDate = LocalDateTime.now()
-                .plusMinutes(expiration)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
         return Jwts.builder()
-                .setExpiration(Date.from(Instant.from(expirationDate)))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration * 1000))
                 .setIssuedAt(new Date())
                 .setSubject(user.getEmail())
                 .signWith(getSingInKey(), SignatureAlgorithm.HS256)
@@ -116,7 +101,6 @@ public class JwtService {
     }
 
     private Claims getAllClaims(String token) {
-        System.out.println(token);
         return Jwts.parserBuilder()
                 .setSigningKey(getSingInKey())
                 .build()

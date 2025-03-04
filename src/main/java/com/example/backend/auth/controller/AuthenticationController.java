@@ -36,8 +36,10 @@ public class AuthenticationController {
     }
 
     @PostMapping("/auth")
-    public AuthenticationResponse auth(@RequestBody AuthenticationRequest authenticationRequest) {
-        return service.authenticate(authenticationRequest);
+    public AuthenticationResponse auth(
+            @NonNull HttpServletResponse response,
+            @RequestBody AuthenticationRequest authenticationRequest) {
+        return service.authenticate(response, authenticationRequest);
     }
 
     @RequestMapping(value = "/password-reset-query",
@@ -54,8 +56,10 @@ public class AuthenticationController {
         service.resetPassword(passwordResetRequest, token);
     }
 
-    @PostMapping("/refresh-token")
-    public ResponseEntity<AuthenticationResponse> refreshToken(HttpServletRequest request) throws Exception {
-        return ResponseEntity.ok(service.refreshToken(request));
+    @GetMapping("/refresh-token")
+    public ResponseEntity<AuthenticationResponse> refreshToken(
+            HttpServletResponse response,
+            HttpServletRequest request) throws Exception {
+        return ResponseEntity.ok(service.refreshToken(request, response));
     }
 }

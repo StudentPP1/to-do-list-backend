@@ -64,9 +64,9 @@ public class OAuth2Handler extends SavedRequestAwareAuthenticationSuccessHandler
                 return newUser;
             });
 
-            AuthenticationService.authenticateUser(user);
-            jwtService.setTokensToCookie(user, response);
-
+            AuthenticationService.registerUser(user);
+            jwtService.setRefreshTokenToCookie(user, response);
+            log.info("OAuth2: sent tokens");
             getRedirectStrategy().sendRedirect(
                     request,
                     response,

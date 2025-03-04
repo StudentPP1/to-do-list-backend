@@ -9,11 +9,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+@Slf4j
 public abstract class TokenFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserService userService;
@@ -41,11 +43,14 @@ public abstract class TokenFilter extends OncePerRequestFilter {
             String token
     ) throws IOException, ServletException {
         String email = jwtService.extractEmail(token);
-
+        log.info("TokenFilter: get email from token");
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            log.info("TokenFilter: find user by email");
             User user = userService.getUserByEmail(email);
+            log.info("TokenFilter: validation token");
             if (jwtService.isTokenValid(token)) {
-                AuthenticationService.authenticateUser(user);
+                log.info("TokenFilter: register user in context");
+                AuthenticationService.registerUser(user);
             }
         }
         filterChain.doFilter(request, response);

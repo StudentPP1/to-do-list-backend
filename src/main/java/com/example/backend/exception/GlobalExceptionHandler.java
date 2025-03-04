@@ -14,6 +14,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<HttpErrorResponse> handleException(final Exception exception) {
         log.error("handled exception: ", exception);
         var response = HttpErrorResponse.of(exception.getMessage(), 500);
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(response, HttpStatus.valueOf(500));
     }
 }

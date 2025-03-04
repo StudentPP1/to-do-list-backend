@@ -12,21 +12,23 @@ import com.example.backend.user.UserService;
 import com.example.backend.utils.CookieUtils;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.example.backend.user.User;
+
 import java.util.Date;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -70,11 +72,10 @@ public class AuthenticationService {
             tokenService.deleteToken(activationToken);
             user.setEnabled(true);
             userService.saveUser(user);
-            authenticateUser(user);
+            registerUser(user);
 
             var jwtToken = jwtService.generateAccessToken(user);
-            var refreshToken = jwtService.generateRefreshToken(user);
-            jwtService.setRefreshTokenToCookie(refreshToken, response);
+            jwtService.setRefreshTokenToCookie(user, response);
             return AuthenticationResponse.builder()
                     .accessToken(jwtToken)
                     .build();
@@ -84,13 +85,10 @@ public class AuthenticationService {
         }
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+    public AuthenticationResponse authenticate(
+            @NonNull HttpServletResponse response,
+            AuthenticationRequest request) {
         log.info("authenticate: call");
-        User user = userService.getUserByEmail(request.getEmail());
-
-        var jwtToken = jwtService.generateAccessToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user);
-
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -98,21 +96,21 @@ public class AuthenticationService {
                 )
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
-
+        User user = userService.getUserByEmail(request.getEmail());
+        var accessToken = jwtService.generateAccessToken(user);
+        jwtService.setRefreshTokenToCookie(user, response);
         return AuthenticationResponse.builder()
-                .accessToken(jwtToken)
-                .refreshToken(refreshToken)
+                .accessToken(accessToken)
                 .build();
     }
 
-    public AuthenticationResponse refreshToken(HttpServletRequest request) throws Exception {
+    public AuthenticationResponse refreshToken(HttpServletRequest request, HttpServletResponse response) throws Exception {
         log.info("refreshToken: call");
-        Optional<Cookie> refreshTokenCookie = CookieUtils.getCookie(request, "refreshToken");
-        String refreshToken = String.valueOf(refreshTokenCookie.orElseThrow(
+        String refreshToken = CookieUtils.getCookie(request, "refreshToken").orElseThrow(
                 () -> new ServletException("refreshToken isn't present")
-        ));
+        );
         User user = userService.getUser();
-        return jwtService.validateAndSendTokens(user, refreshToken);
+        return jwtService.validateAndSendTokens(user, refreshToken, response);
     }
 
     public String forgotPassword(String email) throws MessagingException {
@@ -133,12 +131,15 @@ public class AuthenticationService {
         tokenService.deleteToken(resetPasswordToken);
     }
 
-    public static void authenticateUser(User user) {
+    public static void registerUser(User user) {
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
                 user.getAuthorities()
         );
-        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        SecurityContext context = SecurityContextHolder.getContext();
+        SecurityContextHolderStrategy securityContextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
+        context.setAuthentication(authenticationToken);
+        securityContextHolderStrategy.setContext(context);
     }
 }

@@ -1,7 +1,6 @@
 package com.example.backend.user;
 
 import com.example.backend.enums.OrderMode;
-import com.example.backend.jwt.service.JwtService;
 import com.example.backend.request.RequestTask;
 import com.example.backend.tag.Tag;
 import com.example.backend.tag.TagService;
@@ -25,7 +24,6 @@ public class UserService implements UserDetailsService {
     private final TaskService taskService;
     private final TagService tagService;
     private final TokenService tokenService;
-    private final JwtService jwtService;
     private final UserRepository userRepository;
 
     @Override
@@ -278,8 +276,7 @@ public class UserService implements UserDetailsService {
     public User getUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (principal instanceof UserDetails user) {
-            String email = jwtService.extractEmail(user.getUsername());
-            return getUserByEmail(email);
+            return getUserByEmail(user.getUsername());
         }
         else {
             throw new UsernameNotFoundException("user not found");

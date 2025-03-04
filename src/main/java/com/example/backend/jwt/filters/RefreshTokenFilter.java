@@ -8,21 +8,22 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
+@Slf4j
 @Component
-public class JwtRefreshTokenFilter extends TokenFilter {
-    public JwtRefreshTokenFilter(JwtService jwtService, UserService userService) {
+public class RefreshTokenFilter extends TokenFilter {
+    public RefreshTokenFilter(JwtService jwtService, UserService userService) {
         super(jwtService, userService);
     }
 
     @Override
     protected String getToken(@NonNull HttpServletRequest request) throws ServletException {
-        Optional<Cookie> refreshTokenCookie = CookieUtils.getCookie(request, "refreshToken");
-        return String.valueOf(refreshTokenCookie.orElseThrow(
-                () -> new ServletException("refreshToken isn't present")
-                ));
+        log.info("Refresh token filter invoke");
+        Optional<String> refreshTokenCookie = CookieUtils.getCookie(request, "refreshToken");
+        return refreshTokenCookie.orElseThrow(() -> new ServletException("refreshToken isn't present"));
     }
 }

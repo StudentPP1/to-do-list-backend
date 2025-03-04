@@ -1,14 +1,13 @@
 package com.example.backend.config;
 
 
-import com.example.backend.jwt.filters.JwtAccessTokenFilter;
-import com.example.backend.jwt.filters.JwtRefreshTokenFilter;
+import com.example.backend.jwt.filters.AccessTokenFilter;
+import com.example.backend.jwt.filters.RefreshTokenFilter;
 import com.example.backend.auth.oauth2.OAuth2Handler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -18,8 +17,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,8 +34,8 @@ public class SecurityConfig {
     private final OAuth2Handler oAuth2Handler;
     private final AuthenticationProvider authenticationProvider;
     private final AuthenticationConfiguration authConfiguration;
-    private final JwtAccessTokenFilter accessTokenFilter;
-    private final JwtRefreshTokenFilter refreshTokenFilter;
+    private final AccessTokenFilter accessTokenFilter;
+    private final RefreshTokenFilter refreshTokenFilter;
 
     @Value("${spring.application.frontend.url}")
     private String FRONTEND_URL;
@@ -59,11 +58,16 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(1)
-    SecurityFilterChain oauth2FilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain endpointsFilter(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(req ->
+                        req
+                                .requestMatchers("/oauth2/**").permitAll()
+                                .requestMatchers("/auth/**").permitAll()
+                                .anyRequest().authenticated()
+                )
                 .oauth2Login(auth ->
                         {
                             auth.loginPage(FRONTEND_URL);
@@ -77,38 +81,8 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
-                .build();
-    }
-
-    @Bean
-    @Order(2)
-    SecurityFilterChain endpointRefreshTokenFilter(HttpSecurity http) throws Exception {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(req ->
-                        req.requestMatchers("/auth/refresh-token").authenticated()
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider)
-                .addFilterBefore(refreshTokenFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
-    }
-
-    @Bean
-    @Order(3)
-    SecurityFilterChain endpointsFilter(HttpSecurity http) throws Exception {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(req ->
-                        req
-                                .requestMatchers("/auth/**").permitAll()
-                                .anyRequest().authenticated()
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider)
-                .addFilterBefore(accessTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(accessTokenFilter, OAuth2LoginAuthenticationFilter.class)
+                .addFilterAfter(refreshTokenFilter, AccessTokenFilter.class)
                 .logout((out) -> out
                         .logoutUrl("/logout")
                         .logoutSuccessHandler(((request, response, authentication) ->
