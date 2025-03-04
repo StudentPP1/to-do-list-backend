@@ -126,7 +126,8 @@ public class UserService implements UserDetailsService {
     }
 
     public List<List<Task>> getTasksByDate(List<String> dates) {
-        return dates.stream().map(date -> getTasksByDate(date, getUser())).toList();
+        User user = getUser();
+        return dates.stream().map(date -> getTasksByDate(date, user)).toList();
     }
 
     public void doneTask(String taskId, String date) {
