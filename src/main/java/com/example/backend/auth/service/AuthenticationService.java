@@ -47,20 +47,18 @@ public class AuthenticationService {
 
         try {
             userService.getUserByEmail(request.getEmail());
-        } catch (final UsernameNotFoundException e) {
             throw new IllegalAccessError("user has already registered");
+        } catch (final UsernameNotFoundException e) {
+            User user = User.builder()
+                    .email(request.getEmail())
+                    .username(request.getUsername())
+                    .password(passwordEncoder.encode(request.getPassword()))
+                    .accountLocked(false)
+                    .enabled(false)
+                    .build();
+            userService.saveUser(user);
+            return emailService.sendValidationEmail(user);
         }
-
-        User user = User.builder()
-                .email(request.getEmail())
-                .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .accountLocked(false)
-                .enabled(false)
-                .build();
-
-        userService.saveUser(user);
-        return emailService.sendValidationEmail(user);
     }
 
     public AuthenticationResponse getActivationCode(String activationCode, HttpServletResponse response) {
@@ -89,6 +87,7 @@ public class AuthenticationService {
             @NonNull HttpServletResponse response,
             AuthenticationRequest request) {
         log.info("authenticate: call");
+        User user = userService.getUserByEmail(request.getEmail());
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -96,7 +95,6 @@ public class AuthenticationService {
                 )
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        User user = userService.getUserByEmail(request.getEmail());
         var accessToken = jwtService.generateAccessToken(user);
         jwtService.setRefreshTokenToCookie(user, response);
         return AuthenticationResponse.builder()

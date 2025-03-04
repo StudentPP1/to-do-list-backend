@@ -42,7 +42,7 @@ server:
   servlet:
     session:
       cookie:
-        same-site: strict
+        name: SESSION_ID
 logging:
   level:
     org.springframework.security: trace

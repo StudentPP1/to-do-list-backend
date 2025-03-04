@@ -46,6 +46,7 @@ public class JwtService {
         refreshTokenCookie.setPath("/");
         refreshTokenCookie.setMaxAge(refreshTokenExpiration);
         refreshTokenCookie.setAttribute("SameSite", "Strict");
+        log.info("refreshToken: send new tokens");
         response.addCookie(refreshTokenCookie);
     }
 

@@ -30,11 +30,17 @@ public abstract class TokenFilter extends OncePerRequestFilter {
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
-        String token = this.getToken(request);
-        this.validateToken(request, response, filterChain, token);
+        try {
+            String token = this.getToken(request);
+            this.validateToken(request, response, filterChain, token);
+        } catch (final Exception e) {
+            filterChain.doFilter(request, response);
+        }
     }
 
-    protected abstract String getToken(@NonNull HttpServletRequest request) throws ServletException;
+    protected abstract String getToken(
+            @NonNull HttpServletRequest request
+    ) throws ServletException;
 
     protected void validateToken(
             @NonNull HttpServletRequest request,

@@ -21,7 +21,7 @@ public class AccessTokenFilter extends TokenFilter {
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new ServletException("");
+            throw new ServletException("token not found");
         }
 
         return authHeader.substring(7);
