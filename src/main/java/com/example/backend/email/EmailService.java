@@ -1,8 +1,13 @@
 package com.example.backend.email;
 
+import com.example.backend.enums.TokenType;
+import com.example.backend.token.Token;
+import com.example.backend.token.TokenRepository;
+import com.example.backend.users.user.User;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -12,14 +17,18 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
     private final SpringTemplateEngine springTemplateEngine;
+    private final TokenRepository tokenRepository;
 
     @Value("${spring.mail.host}")
     private String host;
@@ -34,11 +43,44 @@ public class EmailService {
     @Value("${spring.mail.properties.smtp.starttls.enable}")
     private String starttls;
 
+    public String sendEmail(User user, TokenType type) throws MessagingException {
+        String activationToken = generateActivationCode();
+        var token = buildToken(activationToken, user, type);
+        tokenRepository.save(token);
+        sendEmailToUser(
+                user.getEmail(),
+                user.getUsername(),
+                type.getName(),
+                activationToken,
+                type.getName()
+        );
+        return activationToken;
+    }
+    private String generateActivationCode() {
+        String numbers = "0123456789";
+        StringBuilder newCode = new StringBuilder();
+        SecureRandom random = new SecureRandom();
+
+        for (int i = 0; i < 6; i++) {
+            newCode.append(numbers.charAt(random.nextInt(numbers.length())));
+        }
+
+        return newCode.toString();
+    }
+    private Token buildToken(String tokenContent, User user, TokenType type) {
+        return Token.builder()
+                .token(tokenContent)
+                .userId(user.getId())
+                .createdAt(new Date(System.currentTimeMillis()))
+                .expiredAt(new Date(System.currentTimeMillis() + 900000)) // 15 min
+                .tokenType(type)
+                .build();
+    }
     @Async
-    public void sendEmail(
+    protected void sendEmailToUser(
             String to,
             String username,
-            EmailTemplateName template,
+            String templateName,
             String activationCode,
             String subject
     ) throws MessagingException {
@@ -55,8 +97,6 @@ public class EmailService {
         props.put("mail.smtp.auth", auth);
         props.put("mail.smtp.starttls.enable", starttls);
         props.put("mail.debug", "true");
-
-        String templateName = template.getName();
 
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(

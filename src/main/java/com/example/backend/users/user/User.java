@@ -1,4 +1,4 @@
-package com.example.backend.user;
+package com.example.backend.users.user;
 
 import com.example.backend.enums.Role;
 import com.example.backend.token.Token;
@@ -7,7 +7,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -16,7 +15,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.OneToMany;
-import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -26,11 +24,10 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "users")
-public class User implements UserDetails, Principal {
+public class User implements UserDetails {
 
     @Id
     private String id;
-    @Indexed(unique = true)
     private String email;
     private String username;
     private String password;
@@ -39,10 +36,8 @@ public class User implements UserDetails, Principal {
     private List<String> tagsId = new ArrayList<>();
     private boolean accountLocked;
     private boolean enabled;
-
     @Enumerated(EnumType.STRING)
-    private Role role;
-
+    private Role role = Role.USER;
     @OneToMany(mappedBy = "user")
     private List<Token> tokens;
 
@@ -58,11 +53,6 @@ public class User implements UserDetails, Principal {
 
     @Override
     public String getUsername() {
-        return username;
-    }
-
-    @Override
-    public String getName() {
         return email;
     }
 

@@ -1,14 +1,13 @@
 package com.example.backend.config;
 
 
-import com.example.backend.jwt.JwtFilter;
-import com.example.backend.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
-import com.example.backend.oauth2.OAuth2Handler;
+import com.example.backend.jwt.filters.AccessTokenFilter;
+import com.example.backend.jwt.filters.RefreshTokenFilter;
+import com.example.backend.auth.oauth2.OAuth2Handler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -18,32 +17,28 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
-
     private final OAuth2Handler oAuth2Handler;
     private final AuthenticationProvider authenticationProvider;
-    private final JwtFilter jwtFilter;
     private final AuthenticationConfiguration authConfiguration;
+    private final AccessTokenFilter accessTokenFilter;
+    private final RefreshTokenFilter refreshTokenFilter;
 
     @Value("${spring.application.frontend.url}")
     private String FRONTEND_URL;
-
-    @Bean
-    public HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository() {
-        return new HttpCookieOAuth2AuthorizationRequestRepository();
-    }
 
     @Bean
     public AuthenticationManager authenticationManager() throws Exception {
@@ -63,11 +58,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(-2)
-    SecurityFilterChain oauth2FilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain endpointsFilter(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(req ->
+                        req
+                                .requestMatchers( "/favicon.ico").permitAll()
+                                .requestMatchers("/logout").permitAll()
+                                .requestMatchers("/oauth2/**").permitAll()
+                                .requestMatchers("/auth/**").permitAll()
+                                .anyRequest().authenticated()
+                )
                 .oauth2Login(auth ->
                         {
                             auth.loginPage(FRONTEND_URL);
@@ -75,31 +77,14 @@ public class SecurityConfig {
                             auth.redirectionEndpoint(redirectionEndpoint ->
                                     redirectionEndpoint.baseUri("/oauth2/callback/*"));
                             auth.authorizationEndpoint(authorizationEndpoint ->
-                                    authorizationEndpoint
-                                            .baseUri("/oauth2/authorize")
-                                            .authorizationRequestRepository(cookieAuthorizationRequestRepository())
+                                    authorizationEndpoint.baseUri("/oauth2/authorize")
                             );
                         }
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
-                .build();
-    }
-
-    @Bean
-    @Order(-1)
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(req ->
-                        req
-                                .requestMatchers("/auth/**").permitAll()
-                                .anyRequest().authenticated()
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(accessTokenFilter, OAuth2LoginAuthenticationFilter.class)
+                .addFilterAfter(refreshTokenFilter, AccessTokenFilter.class)
                 .logout((out) -> out
                         .logoutUrl("/logout")
                         .logoutSuccessHandler(((request, response, authentication) ->

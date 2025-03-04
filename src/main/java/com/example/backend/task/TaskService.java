@@ -24,7 +24,6 @@ public class TaskService {
     private void fillSubTasksList(String id, List<String> allSubIdList) throws NoSuchElementException {
         Task task = getTask(id);
         allSubIdList.add(id);
-
         for (String subTaskId : task.getSubTasksId()) {
             fillSubTasksList(subTaskId, allSubIdList);
         }
@@ -49,7 +48,6 @@ public class TaskService {
         List<String> subTasksId = parentTask.getSubTasksId();
         List<Task> tasks = getAllTasks(subTasksId);
 
-        System.out.println("before: " + tasks);
         if (subTask.getOrder() - 1 <= tasks.size() - 1) {
             tasks.add(subTask.getOrder() - 1, subTask);
         }
@@ -61,14 +59,10 @@ public class TaskService {
             t.setOrder(tasks.indexOf(t) + 1);
         }
 
-        System.out.println("after: " + tasks);
-
         subTasksId.add(subTaskId);
         parentTask.setSubTasksId(subTasksId);
         taskRepository.save(parentTask);
         taskRepository.saveAll(tasks);
-
-        System.out.println(allTasks.contains(parentId));
 
         if (!allTasks.contains(parentId)) {
             allParentTasksId.add(parentId);
@@ -105,14 +99,17 @@ public class TaskService {
 
             else {
                 int nesting_level = parentTask.getNestingLevel() + 1;
-                Task task = taskRepository.save(new Task(
-                        title,
-                        description,
-                        localDate,
-                        tags,
-                        parentId,
-                        order,
-                        nesting_level));
+                Task task = taskRepository.save(
+                        Task.builder()
+                                .title(title)
+                                .description(description)
+                                .date(localDate)
+                                .tagsId(tags)
+                                .parentId(parentId)
+                                .order(order)
+                                .nestingLevel(nesting_level)
+                                .build()
+                );
 
                 List<String> subTasks = parentTask.getSubTasksId();
                 subTasks.add(task.getId());
@@ -122,7 +119,15 @@ public class TaskService {
             }
         }
         else {
-            Task task = new Task(title, description, localDate, tags, null, order, 0);
+            Task task = Task.builder()
+                    .title(title)
+                    .description(description)
+                    .date(localDate)
+                    .tagsId(tags)
+                    .parentId(null)
+                    .order(order)
+                    .nestingLevel(0)
+                    .build();
             taskRepository.save(task);
             return task.getId();
         }
@@ -147,6 +152,10 @@ public class TaskService {
         task.setOrder(order);
         taskRepository.save(task);
     }
+    public void deleteTasks(List<String> tasksId) {
+        tasksId.forEach(this::deleteTask);
+    }
+
     public void deleteTask(String id) {
         Task task = getTask(id);
         // deleting all nested tasks
@@ -223,20 +232,16 @@ public class TaskService {
         Task currentTask = getTask(taskId);
         if (currentTask.getParentId() == null) {
             if (mode == OrderMode.INSERT) {
-                System.out.println(tasks);
                 tasks.add(currentTask.getOrder() - 1, currentTask);
-                for (Task t:tasks) {
+                for (Task t: tasks) {
                     t.setOrder(tasks.indexOf(t) + 1);
                 }
-                System.out.println(tasks);
             }
             else {
                 List<Task> tasksAfterCurrentTask = tasks.subList(tasks.indexOf(currentTask) + 1, tasks.size());
-                System.out.println(tasksAfterCurrentTask);
                 for (Task t:tasksAfterCurrentTask) {
                     t.setOrder(t.getOrder() - 1);
                 }
-                System.out.println(tasksAfterCurrentTask);
                 tasks = tasksAfterCurrentTask;
             }
             taskRepository.saveAll(tasks);

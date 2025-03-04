@@ -1,4 +1,4 @@
-package com.example.backend.user;
+package com.example.backend.users.user;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;

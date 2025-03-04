@@ -9,9 +9,9 @@ spring:
     security:
       jwt:
         secret-key: ${env.JWT_SECRET_KEY}
-        expiration: 86400000
+        expiration: 900
         refresh-token:
-          expiration: 604800000
+          expiration: 604800
   security:
     oauth2:
       client:
@@ -30,13 +30,19 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: mishamakytonin@gmail.com
+    username: ${env.MAIL_USER_EMAIL}
     password: ${env.MAIL_PASSWORD}
     properties:
       smtp:
         auth: true
         starttls:
           enable: true
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        name: SESSION_ID
 logging:
   level:
     org.springframework.security: trace
