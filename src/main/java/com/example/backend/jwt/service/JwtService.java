@@ -42,7 +42,7 @@ public class JwtService {
         var refreshToken = this.generateRefreshToken(user);
         Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
         refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(false);
+        refreshTokenCookie.setSecure(true);
         refreshTokenCookie.setPath("/");
         refreshTokenCookie.setMaxAge(refreshTokenExpiration);
         refreshTokenCookie.setAttribute("SameSite", "Strict");
