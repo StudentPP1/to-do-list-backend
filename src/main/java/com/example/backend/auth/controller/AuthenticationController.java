@@ -15,6 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.AccessDeniedException;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -38,7 +40,7 @@ public class AuthenticationController {
     @PostMapping("/auth")
     public AuthenticationResponse auth(
             @NonNull HttpServletResponse response,
-            @RequestBody AuthenticationRequest authenticationRequest) {
+            @RequestBody AuthenticationRequest authenticationRequest) throws AccessDeniedException {
         return service.authenticate(response, authenticationRequest);
     }
 

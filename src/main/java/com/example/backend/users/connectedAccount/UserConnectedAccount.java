@@ -2,12 +2,13 @@ package com.example.backend.users.connectedAccount;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import javax.persistence.*;
 
-@Entity
 @Getter
 @NoArgsConstructor
+@Document
 public class UserConnectedAccount {
     @Id
     @GeneratedValue

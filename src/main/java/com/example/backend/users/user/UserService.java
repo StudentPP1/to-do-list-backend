@@ -7,9 +7,6 @@ import com.example.backend.tag.TagService;
 import com.example.backend.task.Task;
 import com.example.backend.task.TaskService;
 import com.example.backend.token.TokenService;
-import com.example.backend.users.connectedAccount.UserConnectedAccountRepository;
-import com.example.backend.users.user.User;
-import com.example.backend.users.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,7 +25,6 @@ public class UserService implements UserDetailsService {
     private final TagService tagService;
     private final TokenService tokenService;
     private final UserRepository userRepository;
-    private final UserConnectedAccountRepository userConnectedAccountRepository;
 
     @Override
     public User loadUserByUsername(String email) {

@@ -64,6 +64,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(req ->
                         req
+                                .requestMatchers( "/favicon.ico").permitAll()
                                 .requestMatchers("/logout").permitAll()
                                 .requestMatchers("/oauth2/**").permitAll()
                                 .requestMatchers("/auth/**").permitAll()
