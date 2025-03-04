@@ -5,7 +5,6 @@ import com.example.backend.jwt.service.JwtService;
 import com.example.backend.user.UserService;
 import com.example.backend.utils.CookieUtils;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
