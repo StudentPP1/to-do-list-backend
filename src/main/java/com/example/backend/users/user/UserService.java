@@ -1,4 +1,4 @@
-package com.example.backend.user;
+package com.example.backend.users.user;
 
 import com.example.backend.enums.OrderMode;
 import com.example.backend.request.RequestTask;
@@ -7,6 +7,9 @@ import com.example.backend.tag.TagService;
 import com.example.backend.task.Task;
 import com.example.backend.task.TaskService;
 import com.example.backend.token.TokenService;
+import com.example.backend.users.connectedAccount.UserConnectedAccountRepository;
+import com.example.backend.users.user.User;
+import com.example.backend.users.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,6 +28,7 @@ public class UserService implements UserDetailsService {
     private final TagService tagService;
     private final TokenService tokenService;
     private final UserRepository userRepository;
+    private final UserConnectedAccountRepository userConnectedAccountRepository;
 
     @Override
     public User loadUserByUsername(String email) {
@@ -252,14 +256,16 @@ public class UserService implements UserDetailsService {
     }
 
     public User getUserByEmail(String email) {
-        return userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("user not found"));
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("user not found")
+                );
     }
 
     public User getUserById(String id) {
         return userRepository.findById(id).orElseThrow(() -> new UsernameNotFoundException("user not found"));
     }
 
-    public void saveUser(User user) {
-        userRepository.save(user);
+    public User saveUser(User user) {
+        return userRepository.save(user);
     }
 }

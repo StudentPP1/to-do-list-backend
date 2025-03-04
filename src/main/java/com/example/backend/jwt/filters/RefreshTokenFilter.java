@@ -2,7 +2,7 @@ package com.example.backend.jwt.filters;
 
 
 import com.example.backend.jwt.service.JwtService;
-import com.example.backend.user.UserService;
+import com.example.backend.users.user.UserService;
 import com.example.backend.utils.CookieUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -2,8 +2,8 @@ package com.example.backend.jwt.filters;
 
 import com.example.backend.auth.service.AuthenticationService;
 import com.example.backend.jwt.service.JwtService;
-import com.example.backend.user.User;
-import com.example.backend.user.UserService;
+import com.example.backend.users.user.User;
+import com.example.backend.users.user.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,11 +48,11 @@ public abstract class TokenFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain,
             String token
     ) throws IOException, ServletException {
-        String email = jwtService.extractEmail(token);
-        log.info("TokenFilter: get email from token");
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            log.info("TokenFilter: find user by email");
-            User user = userService.getUserByEmail(email);
+        String id = jwtService.extractUserId(token);
+        log.info("TokenFilter: get user id from token");
+        if (id != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            log.info("TokenFilter: find user by id");
+            User user = userService.getUserById(id);
             log.info("TokenFilter: validation token");
             if (jwtService.isTokenValid(token)) {
                 log.info("TokenFilter: register user in context");

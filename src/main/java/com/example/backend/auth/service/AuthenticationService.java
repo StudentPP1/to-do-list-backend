@@ -9,7 +9,7 @@ import com.example.backend.request.PasswordResetRequest;
 import com.example.backend.email.EmailService;
 import com.example.backend.token.Token;
 import com.example.backend.token.TokenService;
-import com.example.backend.user.UserService;
+import com.example.backend.users.user.UserService;
 import com.example.backend.utils.CookieUtils;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.ServletException;
@@ -27,8 +27,9 @@ import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.example.backend.user.User;
+import com.example.backend.users.user.User;
 
+import java.nio.file.AccessDeniedException;
 import java.util.Date;
 
 @Service
@@ -82,16 +83,21 @@ public class AuthenticationService {
     public AuthenticationResponse authenticate(
             @NonNull HttpServletResponse response,
             AuthenticationRequest request
-    ) {
+    ) throws AccessDeniedException {
         log.info("authenticate: call");
         User user = userService.getUserByEmail(request.getEmail());
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+        catch (Exception e) {
+            throw new AccessDeniedException("User is logged by oauth2");
+        }
         var accessToken = jwtService.generateAccessToken(user);
         jwtService.setRefreshTokenToCookie(user, response);
         return AuthenticationResponse.builder()

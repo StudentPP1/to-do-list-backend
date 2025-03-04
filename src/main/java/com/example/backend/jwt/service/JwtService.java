@@ -1,7 +1,7 @@
 package com.example.backend.jwt.service;
 
 import com.example.backend.response.AuthenticationResponse;
-import com.example.backend.user.User;
+import com.example.backend.users.user.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -67,7 +67,7 @@ public class JwtService {
         return true;
     }
 
-    public String extractEmail(String token) {
+    public String extractUserId(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
@@ -78,7 +78,7 @@ public class JwtService {
         return Jwts.builder()
                 .setExpiration(new Date(System.currentTimeMillis() + expiration * 1000))
                 .setIssuedAt(new Date())
-                .setSubject(user.getEmail())
+                .setSubject(user.getId())
                 .signWith(getSingInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

@@ -3,7 +3,7 @@ package com.example.backend.email;
 import com.example.backend.enums.TokenType;
 import com.example.backend.token.Token;
 import com.example.backend.token.TokenRepository;
-import com.example.backend.user.User;
+import com.example.backend.users.user.User;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;

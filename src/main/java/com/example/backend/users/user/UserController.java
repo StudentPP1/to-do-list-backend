@@ -1,4 +1,4 @@
-package com.example.backend.user;
+package com.example.backend.users.user;
 
 import com.example.backend.request.RequestDate;
 import com.example.backend.tag.Tag;
