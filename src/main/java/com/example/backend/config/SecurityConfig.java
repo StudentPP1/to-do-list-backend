@@ -4,6 +4,7 @@ package com.example.backend.config;
 import com.example.backend.jwt.filters.AccessTokenFilter;
 import com.example.backend.jwt.filters.RefreshTokenFilter;
 import com.example.backend.auth.oauth2.OAuth2Handler;
+import com.example.backend.utils.CookieUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -87,8 +88,10 @@ public class SecurityConfig {
                 .addFilterAfter(refreshTokenFilter, AccessTokenFilter.class)
                 .logout((out) -> out
                         .logoutUrl("/logout")
-                        .logoutSuccessHandler(((request, response, authentication) ->
-                                SecurityContextHolder.clearContext()))
+                        .logoutSuccessHandler(((request, response, authentication) -> {
+                            CookieUtils.deleteCookies(request, response);
+                            SecurityContextHolder.clearContext();
+                        }))
                 )
                 .build();
     }

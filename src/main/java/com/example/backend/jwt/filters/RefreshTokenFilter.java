@@ -25,10 +25,4 @@ public class RefreshTokenFilter extends TokenFilter {
         Optional<String> refreshTokenCookie = CookieUtils.getCookie(request, "refreshToken");
         return refreshTokenCookie.orElseThrow(() -> new ServletException("refreshToken isn't present"));
     }
-
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        return !path.endsWith("/auth/refresh-token");
-    }
 }
